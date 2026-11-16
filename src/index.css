@@ -1,0 +1,76 @@
+/* --- ESTILOS PROFESIONALES DE PASTELERÍA MIL SABORES --- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Poppins:wght@300;400;500;600&display=swap');
+
+:root {
+  --primary-pastry: #d4a373;
+  --secondary-pastry: #faedcd;
+  --dark-pastry: #1a0f08;
+  --text-muted-custom: #6c757d;
+}
+
+body {
+  font-family: 'Poppins', sans-serif !important;
+  background-color: #fcf8f2 !important; /* Un tono crema / vainilla muy sutil y cálido */
+  color: #333333;
+}
+
+/* Tipografía elegante para títulos principales */
+h1, h2, h3, .navbar-brand, .font-pastry {
+  font-family: 'Playfair Display', serif !important;
+}
+
+/* Navbar sofisticado */
+.navbar {
+  background-color: #111111 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* Efectos de elevación para las tarjetas de productos */
+.product-item {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 16px !important;
+}
+
+.product-item:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Transición en imágenes de productos */
+.product-item img {
+  transition: transform 0.5s ease;
+}
+
+.product-item:hover img {
+  transform: scale(1.05);
+}
+
+/* Botones redondeados y elegantes */
+.btn-warning {
+  background-color: #e6a15c !important;
+  border-color: #e6a15c !important;
+  color: #ffffff !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-warning:hover {
+  background-color: #d48b44 !important;
+  border-color: #d48b44 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(230, 161, 92, 0.4) !important;
+}
+
+/* Tarjetas de beneficios */
+.feature-card {
+  border-radius: 16px !important;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+}

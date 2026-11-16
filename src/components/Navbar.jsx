@@ -1,0 +1,82 @@
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+
+export default function Navbar() {
+  const { cantidadTotalCarrito } = useCart();
+  const { usuarioLogueado, logoutUsuario } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCerrarSesion = () => {
+    logoutUsuario();
+    navigate('/login');
+  };
+
+  return (
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark w-100">
+      <div className="container-fluid px-4">
+        <Link className="navbar-brand fw-bold" to="/">
+          Mil Sabores
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav ms-auto align-items-lg-center">
+            <li className="nav-item">
+              <Link className="nav-link" to="/">
+                Inicio
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/categorias">
+                Categorías
+              </Link>
+            </li>
+
+            {usuarioLogueado ? (
+              <>
+                <li className="nav-item text-light mx-2">
+                  Hola, <b>{usuarioLogueado.nombre}</b>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className="btn btn-outline-light btn-sm ms-2"
+                    onClick={handleCerrarSesion}
+                  >
+                    Cerrar Sesión
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/login">
+                    Ingresar
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/registro">
+                    Registrarse
+                  </Link>
+                </li>
+              </>
+            )}
+
+            <li className="nav-item ms-lg-2 mt-2 mt-lg-0">
+              <Link className="btn btn-warning text-dark fw-bold" to="/carrito">
+                Carrito ({cantidadTotalCarrito})
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  );
+}

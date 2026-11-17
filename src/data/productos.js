@@ -7,7 +7,7 @@ export let productosIniciales = [
     tamano: 'mediano',
     nombre: 'Torta Cuadrada de Chocolate',
     precio: 45000,
-    imagen: '/img/product_1.avif',
+    imagen: '/img/product_1.jpg',
     descripcion: 'Deliciosa torta de chocolate con capas de ganache y un toque de avellanas. Personalizable con mensajes especiales.'
   },
   {
@@ -17,7 +17,7 @@ export let productosIniciales = [
     tamano: 'grande',
     nombre: 'Torta Cuadrada de Frutas',
     precio: 50000,
-    imagen: '/img/product_2.jfif',
+    imagen: '/img/product_2.jpg',
     descripcion: 'Una mezcla de frutas frescas y crema chantilly sobre un suave bizcocho de vainilla, ideal para celebraciones.'
   },
   {
@@ -27,7 +27,7 @@ export let productosIniciales = [
     tamano: 'mediano',
     nombre: 'Torta Circular de Vainilla',
     precio: 40000,
-    imagen: '/img/product_3.webp',
+    imagen: '/img/product_3.jpg',
     descripcion: 'Bizcocho de vainilla clásico relleno con crema pastelera y cubierto con un glaseado dulce, perfecto para cualquier ocasión.'
   },
   {
@@ -127,7 +127,7 @@ export let productosIniciales = [
     tamano: 'mediano',
     nombre: 'Torta Vegana de Chocolate',
     precio: 50000,
-    imagen: '/img/product_13.jfif',
+    imagen: '/img/product_13.jpg',
     descripcion: 'Torta de chocolate húmeda y deliciosa, hecha sin productos de origen animal, perfecta para veganos.'
   },
   {
@@ -137,7 +137,7 @@ export let productosIniciales = [
     tamano: 'chico',
     nombre: 'Galletas Veganas de Avena',
     precio: 4500,
-    imagen: '/img/product_14.webp',
+    imagen: '/img/product_14.jpg',
     descripcion: 'Crujientes y sabrosas, estas galletas son una excelente opción para un snack saludable y vegano.'
   },
   {

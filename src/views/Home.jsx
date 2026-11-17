@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { SellosNutricionales } from '../components/SellosNutricionales';
+import axiosClient from '../Services/axiosClient';
 
 export default function Home() {
-  const { productos, agregarAlCarrito } = useCart();
+  const { productos: productosContext, agregarAlCarrito } = useCart();
+  const [productos, setProductos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  
+  // Estado para el producto seleccionado en el Modal de Detalle
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+
+  useEffect(() => {
+    axiosClient.get('/api/productos')
+      .then((response) => {
+        setProductos(response.data);
+        setCargando(false);
+      })
+      .catch((error) => {
+        console.error('Error al cargar productos desde AWS:', error);
+        setProductos(productosContext || []);
+        setCargando(false);
+      });
+  }, [productosContext]);
 
   return (
     <div className="container-fluid px-0">
-      {/* 1. HERO BANNER DE ALTO NIVEL */}
+      {/* Banner Principal */}
       <div 
         className="position-relative overflow-hidden text-white d-flex align-items-center"
         style={{
@@ -28,17 +48,22 @@ export default function Home() {
           <p className="lead text-light mb-4 mx-auto" style={{ maxWidth: '650px', fontSize: '1.25rem', opacity: 0.9 }}>
             50 años creando experiencias dulces e inolvidables con los más finos ingredientes para la familia chilena.
           </p>
-          <a href="#catalogo" className="btn btn-warning btn-lg rounded-pill py-3 px-5 fw-bold shadow-sm">
-            Explorar Catálogo 🎂
-          </a>
+          <div className="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="#destacados" className="btn btn-warning btn-lg rounded-pill py-3 px-5 fw-bold shadow-sm">
+              Ver Destacados 🎂
+            </a>
+            <Link to="/categorias" className="btn btn-outline-light btn-lg rounded-pill py-3 px-5 fw-bold">
+              Explorar Categorías
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* 2. CARACTERÍSTICAS / BENEFICIOS */}
+      {/* Tarjetas de Beneficios */}
       <div className="container py-5 my-4">
         <div className="row g-4">
           <div className="col-lg-4 col-md-6">
-            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100">
+            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100 rounded-3">
               <div className="fs-1 me-3 p-3 rounded-circle" style={{ backgroundColor: '#fff8f0' }}>🌾</div>
               <div>
                 <h5 className="mb-1 fw-bold">Ingredientes Frescos</h5>
@@ -47,7 +72,7 @@ export default function Home() {
             </div>
           </div>
           <div className="col-lg-4 col-md-6">
-            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100">
+            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100 rounded-3">
               <div className="fs-1 me-3 p-3 rounded-circle" style={{ backgroundColor: '#fff8f0' }}>👨‍🍳</div>
               <div>
                 <h5 className="mb-1 fw-bold">Receta Tradicional</h5>
@@ -56,7 +81,7 @@ export default function Home() {
             </div>
           </div>
           <div className="col-lg-4 col-md-6">
-            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100">
+            <div className="d-flex align-items-center p-4 bg-white border-0 shadow-sm feature-card h-100 rounded-3">
               <div className="fs-1 me-3 p-3 rounded-circle" style={{ backgroundColor: '#fff8f0' }}>🚚</div>
               <div>
                 <h5 className="mb-1 fw-bold">Despacho Especializado</h5>
@@ -67,57 +92,207 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 3. GRILLA DE PRODUCTOS DESTACADOS */}
-      <div className="container py-5" id="catalogo">
+      {/* Vitrina: Selección Destacada (Top 6 productos) */}
+      <div className="container py-5" id="destacados">
         <div className="text-center mx-auto mb-5" style={{ maxWidth: '600px' }}>
           <span className="text-warning text-uppercase fw-bold tracking-wider" style={{ letterSpacing: '2px', fontSize: '0.85rem' }}>
-            Nuestra Selección
+            Los Favoritos de Nuestros Clientes
           </span>
-          <h2 className="display-5 fw-bold mt-1 mb-3">Catálogo Destacado</h2>
+          <h2 className="display-5 fw-bold mt-1 mb-3">Selección Destacada</h2>
           <div className="mx-auto" style={{ width: '60px', height: '3px', backgroundColor: '#e6a15c' }}></div>
+          <p className="text-muted small mt-3">Haz clic en cualquier producto para ver su foto completa y detalles</p>
         </div>
 
-        <div className="row g-4">
-          {productos.map((prod) => (
-            <div className="col-lg-4 col-md-6" key={prod.id}>
-              <div className="card product-item bg-white border-0 shadow-sm h-100 overflow-hidden">
-                <div className="position-relative overflow-hidden" style={{ height: '260px' }}>
-                  <img 
-                    className="w-100 h-100" 
-                    style={{ objectFit: 'cover' }} 
-                    src={prod.imagen} 
-                    alt={prod.nombre} 
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/400?text=Mil+Sabores';
-                    }}
-                  />
-                </div>
-                <div className="text-center p-4 d-flex flex-column flex-grow-1">
-                  <h5 className="mb-2 fw-bold">{prod.nombre}</h5>
-                  <span className="fw-bold fs-4 mb-3" style={{ color: '#d48b44' }}>
-                    ${Number(prod.precio).toLocaleString('es-CL')}
-                  </span>
-                  
-                  <p className="text-muted small mb-3 flex-grow-1">{prod.descripcion}</p>
+        {cargando ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-warning" role="status">
+              <span className="visually-hidden">Cargando...</span>
+            </div>
+            <p className="mt-2 text-muted">Cargando productos...</p>
+          </div>
+        ) : (
+          <>
+            <div className="row g-4">
+              {productos.slice(0, 6).map((prod) => (
+                <div className="col-lg-4 col-md-6" key={prod.id}>
+                  <div className="card product-item bg-white border-0 shadow-sm h-100 overflow-hidden rounded-3">
+                    {/* Contenedor de imagen clickeable */}
+                    <div 
+                      className="position-relative overflow-hidden" 
+                      style={{ height: '260px', cursor: 'pointer' }}
+                      onClick={() => setProductoSeleccionado(prod)}
+                      title="Clic para ver imagen completa y detalles"
+                    >
+                      <img 
+                        className="w-100 h-100" 
+                        style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }} 
+                        src={`/img/product_${prod.id}.jpg`} 
+                        alt={prod.nombre} 
+                        onError={(e) => {
+                          e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(prod.nombre)}`;
+                        }}
+                      />
+                      <span 
+                        className="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill"
+                        style={{ fontSize: '0.75rem' }}
+                      >
+                        🔍 Ver detalle
+                      </span>
+                    </div>
 
-                  <div className="d-flex justify-content-center mb-3">
-                    <SellosNutricionales nombreProducto={prod.nombre} />
+                    <div className="text-center p-4 d-flex flex-column flex-grow-1">
+                      {/* Título clickeable */}
+                      <h5 
+                        className="mb-2 fw-bold" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setProductoSeleccionado(prod)}
+                      >
+                        {prod.nombre}
+                      </h5>
+                      <span className="fw-bold fs-4 mb-3" style={{ color: '#d48b44' }}>
+                        ${Number(prod.precio).toLocaleString('es-CL')}
+                      </span>
+                      
+                      <p className="text-muted small mb-3 flex-grow-1">{prod.descripcion}</p>
+
+                      <div className="d-flex justify-content-center mb-3">
+                        <SellosNutricionales nombreProducto={prod.nombre} />
+                      </div>
+
+                      <div className="mt-auto">
+                        <button 
+                          className="btn btn-warning rounded-pill py-2.5 px-4 w-100 fw-bold shadow-sm"
+                          onClick={() => agregarAlCarrito(prod)}
+                        >
+                          Añadir al Carrito 🛒
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Botón para ver el catálogo completo en Categorías */}
+            <div className="text-center mt-5">
+              <Link 
+                to="/categorias" 
+                className="btn btn-outline-dark btn-lg rounded-pill px-5 py-3 fw-bold shadow-sm"
+              >
+                Ver Catálogo Completo ({productos.length} productos) →
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Banner Promocional de Cupones y Descuento Senior */}
+      <div className="container py-5 mb-4">
+        <div 
+          className="p-5 rounded-4 shadow-sm text-center text-white"
+          style={{
+            background: 'linear-gradient(135deg, #2c1e16 0%, #5c3a21 100%)'
+          }}
+        >
+          <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-3">
+            Beneficios Exclusivos
+          </span>
+          <h3 className="display-6 fw-bold mb-3">¡Endulza tus celebraciones con descuentos especiales!</h3>
+          <p className="lead mb-4 mx-auto" style={{ maxWidth: '700px', opacity: 0.9 }}>
+            Usa los códigos <strong>MILSABORES10</strong> o <strong>DUOC2026</strong> en tu carrito de compras. 
+            Además, si tienes más de 50 años, obtienes un <strong>50% de descuento automático</strong> en toda la tienda.
+          </p>
+          <Link to="/categorias" className="btn btn-warning btn-lg rounded-pill px-5 fw-bold shadow">
+            Ir a Comprar Ahora 🍰
+          </Link>
+        </div>
+      </div>
+
+      {/* MODAL DE DETALLE DEL PRODUCTO (FOTO COMPLETA + DESCRIPCIÓN) */}
+      {productoSeleccionado && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1050 }}
+          onClick={() => setProductoSeleccionado(null)}
+        >
+          <div 
+            className="modal-dialog modal-dialog-centered modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div className="modal-header border-0 pb-0">
+                <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold">
+                  {productoSeleccionado.categoria?.nombre || 'Especialidad Artesanal'}
+                </span>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  aria-label="Cerrar"
+                  onClick={() => setProductoSeleccionado(null)}
+                ></button>
+              </div>
+
+              <div className="modal-body p-4">
+                <div className="row g-4 align-items-center">
+                  {/* Imagen completa sin recortar (objectFit: 'contain') */}
+                  <div className="col-md-6 text-center bg-light rounded-3 p-3">
+                    <img
+                      src={`/img/product_${productoSeleccionado.id}.jpg`}
+                      alt={productoSeleccionado.nombre}
+                      className="img-fluid rounded-3"
+                      style={{ maxHeight: '420px', width: '100%', objectFit: 'contain' }}
+                      onError={(e) => {
+                        e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(productoSeleccionado.nombre)}`;
+                      }}
+                    />
                   </div>
 
-                  <div className="mt-auto">
-                    <button 
-                      className="btn btn-warning rounded-pill py-2.5 px-4 w-100 fw-bold shadow-sm"
-                      onClick={() => agregarAlCarrito(prod)}
-                    >
-                      Añadir al Carrito 🛒
-                    </button>
+                  {/* Información detallada */}
+                  <div className="col-md-6 d-flex flex-column">
+                    <h3 className="fw-bold mb-2">{productoSeleccionado.nombre}</h3>
+                    <h4 className="fw-bold mb-3" style={{ color: '#d48b44' }}>
+                      ${Number(productoSeleccionado.precio).toLocaleString('es-CL')}
+                    </h4>
+
+                    <p className="text-muted mb-3" style={{ lineHeight: '1.6' }}>
+                      {productoSeleccionado.descripcion}
+                    </p>
+
+                    {productoSeleccionado.stock !== undefined && (
+                      <p className="small text-secondary mb-3">
+                        <strong>Stock disponible:</strong> {productoSeleccionado.stock} unidades
+                      </p>
+                    )}
+
+                    <div className="mb-4">
+                      <SellosNutricionales nombreProducto={productoSeleccionado.nombre} />
+                    </div>
+
+                    <div className="d-grid gap-2 mt-auto">
+                      <button
+                        className="btn btn-warning btn-lg rounded-pill fw-bold shadow-sm"
+                        onClick={() => {
+                          agregarAlCarrito(productoSeleccionado);
+                          setProductoSeleccionado(null);
+                        }}
+                      >
+                        Añadir al Carrito 🛒
+                      </button>
+                      <button
+                        className="btn btn-outline-secondary rounded-pill"
+                        onClick={() => setProductoSeleccionado(null)}
+                      >
+                        Seguir mirando
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
-} 
+}

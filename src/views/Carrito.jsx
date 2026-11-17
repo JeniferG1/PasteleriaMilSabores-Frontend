@@ -30,7 +30,10 @@ export default function Carrito() {
     direccion: '',
     comuna: '',
     fechaEntrega: '',
-    dedicatoria: ''
+    dedicatoria: '',
+    numeroTarjeta: '',
+    vencimientoTarjeta: '',
+    cvvTarjeta: ''
   });
 
   // Autocompletado si el usuario inició sesión
@@ -58,7 +61,30 @@ export default function Carrito() {
 
   const handleCheckoutChange = (e) => {
     const { name, value } = e.target;
-    setDatosEnvio({ ...datosEnvio, [name]: value });
+    let valorFormateado = value;
+
+    // Formatear número de tarjeta en grupos de 4 dígitos (Ej: 4532 1234 5678 9012)
+    if (name === 'numeroTarjeta') {
+      const soloNumeros = value.replace(/\D/g, '').slice(0, 16);
+      valorFormateado = soloNumeros.replace(/(\d{4})(?=\d)/g, '$1 ');
+    }
+
+    // Formatear vencimiento en MM/AA
+    if (name === 'vencimientoTarjeta') {
+      const soloNumeros = value.replace(/\D/g, '').slice(0, 4);
+      if (soloNumeros.length >= 3) {
+        valorFormateado = `${soloNumeros.slice(0, 2)}/${soloNumeros.slice(2)}`;
+      } else {
+        valorFormateado = soloNumeros;
+      }
+    }
+
+    // Solo números para CVV
+    if (name === 'cvvTarjeta') {
+      valorFormateado = value.replace(/\D/g, '').slice(0, 4);
+    }
+
+    setDatosEnvio({ ...datosEnvio, [name]: valorFormateado });
     if (erroresCheckout[name]) {
       setErroresCheckout({ ...erroresCheckout, [name]: '' });
     }
@@ -84,6 +110,18 @@ export default function Carrito() {
       }
     }
 
+    // Validaciones de Tarjeta
+    const tarjetaLimpia = datosEnvio.numeroTarjeta.replace(/\s/g, '');
+    if (tarjetaLimpia.length < 16) {
+      errores.numeroTarjeta = 'Ingresa los 16 dígitos de tu tarjeta.';
+    }
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(datosEnvio.vencimientoTarjeta)) {
+      errores.vencimientoTarjeta = 'Formato inválido (MM/AA).';
+    }
+    if (datosEnvio.cvvTarjeta.length < 3) {
+      errores.cvvTarjeta = 'Ingresa un CVV válido (3 o 4 dígitos).';
+    }
+
     setErroresCheckout(errores);
     return Object.keys(errores).length === 0;
   };
@@ -92,12 +130,16 @@ export default function Carrito() {
     e.preventDefault();
     if (!validarCheckout()) return;
 
+    const tarjetaLimpia = datosEnvio.numeroTarjeta.replace(/\s/g, '');
+    const ultimosCuatro = tarjetaLimpia.slice(-4);
+
     const resumenOrden = {
       numeroOrden: `MS-${Math.floor(100000 + Math.random() * 900000)}`,
       cliente: datosEnvio.nombre,
       direccion: `${datosEnvio.direccion}, ${datosEnvio.comuna}`,
       fechaEntrega: datosEnvio.fechaEntrega,
       dedicatoria: datosEnvio.dedicatoria,
+      tarjetaTerminadaEn: ultimosCuatro,
       totalPagado: totalPagar,
       items: [...cart]
     };
@@ -120,6 +162,7 @@ export default function Carrito() {
             <p className="mb-1"><strong>Cliente:</strong> {compraExitosa.cliente}</p>
             <p className="mb-1"><strong>Dirección de envío:</strong> {compraExitosa.direccion}</p>
             <p className="mb-1"><strong>Fecha programada:</strong> {compraExitosa.fechaEntrega}</p>
+            <p className="mb-1"><strong>Método de pago:</strong> Tarjeta terminada en **** {compraExitosa.tarjetaTerminadaEn}</p>
             {compraExitosa.dedicatoria && (
               <p className="mb-1"><strong>Mensaje en torta:</strong> "{compraExitosa.dedicatoria}"</p>
             )}
@@ -341,6 +384,59 @@ export default function Carrito() {
                         value={datosEnvio.dedicatoria}
                         onChange={handleCheckoutChange}
                       />
+                    </div>
+                  </div>
+
+                  {/* Sección de Pago con Tarjeta */}
+                  <hr className="my-4" />
+                  <h4 className="fw-bold mb-3">Método de Pago 💳</h4>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Número de Tarjeta *</label>
+                      <input
+                        type="text"
+                        name="numeroTarjeta"
+                        placeholder="4532 1234 5678 9012"
+                        maxLength={19}
+                        className={`form-control ${erroresCheckout.numeroTarjeta ? 'is-invalid' : ''}`}
+                        value={datosEnvio.numeroTarjeta}
+                        onChange={handleCheckoutChange}
+                      />
+                      {erroresCheckout.numeroTarjeta && (
+                        <div className="invalid-feedback">{erroresCheckout.numeroTarjeta}</div>
+                      )}
+                    </div>
+
+                    <div className="col-md-3">
+                      <label className="form-label fw-semibold">Vencimiento *</label>
+                      <input
+                        type="text"
+                        name="vencimientoTarjeta"
+                        placeholder="MM/AA"
+                        maxLength={5}
+                        className={`form-control ${erroresCheckout.vencimientoTarjeta ? 'is-invalid' : ''}`}
+                        value={datosEnvio.vencimientoTarjeta}
+                        onChange={handleCheckoutChange}
+                      />
+                      {erroresCheckout.vencimientoTarjeta && (
+                        <div className="invalid-feedback">{erroresCheckout.vencimientoTarjeta}</div>
+                      )}
+                    </div>
+
+                    <div className="col-md-3">
+                      <label className="form-label fw-semibold">CVV *</label>
+                      <input
+                        type="password"
+                        name="cvvTarjeta"
+                        placeholder="123"
+                        maxLength={4}
+                        className={`form-control ${erroresCheckout.cvvTarjeta ? 'is-invalid' : ''}`}
+                        value={datosEnvio.cvvTarjeta}
+                        onChange={handleCheckoutChange}
+                      />
+                      {erroresCheckout.cvvTarjeta && (
+                        <div className="invalid-feedback">{erroresCheckout.cvvTarjeta}</div>
+                      )}
                     </div>
                   </div>
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import CakeTower from '../components/CakeTower'; 
 
 export default function Carrito() {
   const {
@@ -13,10 +14,12 @@ export default function Carrito() {
     vaciarCarrito,
     aplicarCupon,
     mensajeCupon,
-    mensajeStock
+    mensajeStock,
+    agregarRegalo
   } = useCart();
 
   const { usuarioLogueado } = useAuth();
+  const navigate = useNavigate();
   const [inputCupon, setInputCupon] = useState('');
 
   // Estados para Checkout
@@ -63,13 +66,11 @@ export default function Carrito() {
     const { name, value } = e.target;
     let valorFormateado = value;
 
-    // Formatear número de tarjeta en grupos de 4 dígitos (Ej: 4532 1234 5678 9012)
     if (name === 'numeroTarjeta') {
       const soloNumeros = value.replace(/\D/g, '').slice(0, 16);
       valorFormateado = soloNumeros.replace(/(\d{4})(?=\d)/g, '$1 ');
     }
 
-    // Formatear vencimiento en MM/AA
     if (name === 'vencimientoTarjeta') {
       const soloNumeros = value.replace(/\D/g, '').slice(0, 4);
       if (soloNumeros.length >= 3) {
@@ -79,7 +80,6 @@ export default function Carrito() {
       }
     }
 
-    // Solo números para CVV
     if (name === 'cvvTarjeta') {
       valorFormateado = value.replace(/\D/g, '').slice(0, 4);
     }
@@ -89,8 +89,7 @@ export default function Carrito() {
       setErroresCheckout({ ...erroresCheckout, [name]: '' });
     }
   };
-
-  const validarCheckout = () => {
+const validarCheckout = () => {
     const errores = {};
     if (!datosEnvio.nombre.trim()) errores.nombre = 'El nombre de quien recibe es obligatorio.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosEnvio.email)) errores.email = 'Correo inválido.';
@@ -110,7 +109,6 @@ export default function Carrito() {
       }
     }
 
-    // Validaciones de Tarjeta
     const tarjetaLimpia = datosEnvio.numeroTarjeta.replace(/\s/g, '');
     if (tarjetaLimpia.length < 16) {
       errores.numeroTarjeta = 'Ingresa los 16 dígitos de tu tarjeta.';
@@ -148,12 +146,24 @@ export default function Carrito() {
     vaciarCarrito();
   };
 
+  const handleProcederPagoClick = () => {
+    if (!usuarioLogueado) {
+      alert('🔒 Debes iniciar sesión o registrarte para realizar una compra.');
+      navigate('/login');
+      return;
+    }
+    setMostrarCheckout(true);
+  };
+
+  // Verificar si ya reclamó un regalo en este carrito para evitar duplicados
+  const yaTieneRegalo = cart.some((item) => item.esRegalo);
+
   // Vista de Comprobante / Boleta tras pagar
   if (compraExitosa) {
     return (
       <div className="container py-5">
         <div className="card border-0 shadow-sm p-5 mx-auto text-center" style={{ maxWidth: '650px' }}>
-          <h2 className="fw-bold text-success mb-2">Pedido Confirmado</h2>
+          <h2 className="fw-bold text-success mb-2">¡Pedido Confirmado con Éxito! 🎉</h2>
           <p className="text-muted mb-4">
             Orden N° <strong>{compraExitosa.numeroOrden}</strong>
           </p>
@@ -167,13 +177,23 @@ export default function Carrito() {
               <p className="mb-1"><strong>Mensaje en torta:</strong> "{compraExitosa.dedicatoria}"</p>
             )}
             <hr />
+            <h6 className="fw-bold mb-2">Detalle de productos:</h6>
+            <ul className="list-unstyled small mb-3">
+              {compraExitosa.items.map((prod) => (
+                <li key={prod.id} className="d-flex justify-content-between">
+                  <span>{prod.cantidad}x {prod.nombre}</span>
+                  <span>{prod.precio === 0 ? 'GRATIS' : `$${(prod.precio * prod.cantidad).toLocaleString('es-CL')}`}</span>
+                </li>
+              ))}
+            </ul>
+            <hr />
             <h5 className="fw-bold text-end mb-0">
               Total Pagado: ${compraExitosa.totalPagado.toLocaleString('es-CL')}
             </h5>
           </div>
 
           <Link to="/" className="btn btn-primary rounded-pill px-5 py-2 fw-bold">
-            Volver a la Pastelería
+            Volver al Inicio
           </Link>
         </div>
       </div>
@@ -202,7 +222,7 @@ export default function Carrito() {
       <div className="container">
         <div className="text-center mx-auto mb-5" style={{ maxWidth: '600px' }}>
           <h1 className="display-6 mb-3 fw-bold">Carrito de Compras</h1>
-          <p className="text-muted">Revisa tus productos seleccionados y completa los datos de entrega</p>
+          <p className="text-muted">Revisa tus productos seleccionados, juega por un postre gratis y completa tu entrega</p>
           <hr className="w-25 mx-auto bg-primary" />
         </div>
 
@@ -213,7 +233,7 @@ export default function Carrito() {
         )}
 
         <div className="row g-4">
-          {/* Columna Izquierda: Tabla de Productos + Formulario de Checkout */}
+          {/* Columna Izquierda: Tabla + Minijuego Pre-Pago + Formulario Checkout */}
           <div className="col-lg-8">
             <div className="card shadow-sm border-0 p-4 mb-4">
               <div className="table-responsive">
@@ -233,32 +253,52 @@ export default function Carrito() {
                       const alcanzoLimite = item.cantidad >= limiteMaximo;
 
                       return (
-                        <tr key={item.id}>
+                        <tr key={item.id} className={item.esRegalo ? 'table-success' : ''}>
                           <td>
                             <div className="fw-bold">{item.nombre}</div>
-                            <small className="text-muted">Máx. {limiteMaximo} unid. por pedido</small>
+                            {item.esRegalo ? (
+                              <span className="badge bg-success">Premio Cake Tower</span>
+                            ) : (
+                              <small className="text-muted">Máx. {limiteMaximo} unid. por pedido</small>
+                            )}
                           </td>
-                          <td>${item.precio?.toLocaleString('es-CL')}</td>
                           <td>
-                            <div className="d-flex align-items-center justify-content-center">
-                              <button
-                                className="btn btn-sm btn-outline-secondary px-2"
-                                onClick={() => cambiarCantidad(item.id, -1)}
-                              >
-                                -
-                              </button>
-                              <span className="mx-3 fw-bold">{item.cantidad}</span>
-                              <button
-                                className="btn btn-sm btn-outline-secondary px-2"
-                                onClick={() => cambiarCantidad(item.id, 1)}
-                                disabled={alcanzoLimite}
-                                title={alcanzoLimite ? `Límite máximo de ${limiteMaximo} unidades alcanzado` : 'Aumentar cantidad'}
-                              >
-                                +
-                              </button>
-                            </div>
+                            {item.esRegalo ? (
+                              <span className="fw-bold text-success">$0</span>
+                            ) : (
+                              `$${item.precio?.toLocaleString('es-CL')}`
+                            )}
                           </td>
-                          <td className="fw-bold">${(item.precio * item.cantidad).toLocaleString('es-CL')}</td>
+                          <td>
+                            {item.esRegalo ? (
+                              <div className="text-center fw-bold">1</div>
+                            ) : (
+                              <div className="d-flex align-items-center justify-content-center">
+                                <button
+                                  className="btn btn-sm btn-outline-secondary px-2"
+                                  onClick={() => cambiarCantidad(item.id, -1)}
+                                >
+                                  -
+                                </button>
+                                <span className="mx-3 fw-bold">{item.cantidad}</span>
+                                <button
+                                  className="btn btn-sm btn-outline-secondary px-2"
+                                  onClick={() => cambiarCantidad(item.id, 1)}
+                                  disabled={alcanzoLimite}
+                                  title={alcanzoLimite ? `Límite máximo de ${limiteMaximo} unidades alcanzado` : 'Aumentar cantidad'}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                          <td className="fw-bold">
+                            {item.esRegalo ? (
+                              <span className="text-success">GRATIS</span>
+                            ) : (
+                              `$${(item.precio * item.cantidad).toLocaleString('es-CL')}`
+                            )}
+                          </td>
                           <td className="text-center">
                             <button
                               className="btn btn-sm btn-outline-danger"
@@ -280,6 +320,43 @@ export default function Carrito() {
                 </button>
               </div>
             </div>
+
+            {/* SECCIÓN DEL MINIJUEGO ANTES DE PAGAR (SOLO CLIENTES LOGUEADOS) */}
+            {!mostrarCheckout && (
+              <div className="card shadow-sm border border-warning p-4 mb-4 bg-white">
+                {usuarioLogueado ? (
+                  yaTieneRegalo ? (
+                    <div className="text-center py-3">
+                      <h5 className="fw-bold text-success mb-1">🎉 ¡Ya añadiste tu premio gratis a esta compra!</h5>
+                      <p className="text-muted small mb-0">
+                        Tu postre de regalo aparece listado arriba con valor $0. Procede al pago cuando estés listo.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <span className="badge bg-warning text-dark mb-2 px-3 py-1 rounded-pill fw-bold">
+                        🎮 Beneficio Exclusivo Clientes
+                      </span>
+                      <h4 className="fw-bold mb-2">¡Gana un Postre Gratis para esta Compra!</h4>
+                      <p className="text-muted small mb-3">
+                        Supera el reto de <strong>20 pisos</strong> en <em>Cake Tower</em> antes de pagar y añade al instante uno de nuestros tres postres estrella con costo <strong>$0</strong>.
+                      </p>
+                      <CakeTower onSelectReward={(premio) => agregarRegalo(premio)} />
+                    </div>
+                  )
+                ) : (
+                  <div className="text-center py-3">
+                    <h5 className="fw-bold mb-2">🔒 ¿Quieres llevarte un postre gratis en tu pedido?</h5>
+                    <p className="text-muted small mb-3">
+                      Inicia sesión como cliente para desbloquear el minijuego <strong>Cake Tower</strong> antes de pagar.
+                    </p>
+                    <Link to="/login" className="btn btn-outline-primary rounded-pill px-4 fw-bold">
+                      Iniciar Sesión para Jugar
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Formulario de Checkout Desplegable */}
             {mostrarCheckout && (
@@ -515,7 +592,7 @@ export default function Carrito() {
               {!mostrarCheckout && (
                 <button
                   className="btn btn-success w-100 py-3 rounded-pill fw-bold shadow-sm"
-                  onClick={() => setMostrarCheckout(true)}
+                  onClick={handleProcederPagoClick}
                 >
                   Proceder al Pago
                 </button>

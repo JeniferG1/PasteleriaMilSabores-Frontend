@@ -23,6 +23,9 @@ export const CartProvider = ({ children }) => {
   // Estado del Carrito y mensajes de límite
   const [cart, setCart] = useState([]);
   const [mensajeStock, setMensajeStock] = useState('');
+  
+  // Estado para la notificación flotante (Toast) al agregar al carrito
+  const [notificacionCarrito, setNotificacionCarrito] = useState(null);
 
   // Estado de Cupones / Descuentos
   const [cupon, setCupon] = useState('');
@@ -42,7 +45,14 @@ export const CartProvider = ({ children }) => {
     }, 3500);
   };
 
-  // Funciones del Carrito con validación de límite máximo
+  const mostrarNotificacion = (texto) => {
+    setNotificacionCarrito(texto);
+    setTimeout(() => {
+      setNotificacionCarrito(null);
+    }, 3000);
+  };
+
+  // Funciones del Carrito con validación de límite máximo y notificación
   const agregarAlCarrito = (producto) => {
     const productoActual = productos.find((p) => p.id === producto.id) || producto;
     const limiteMaximo = productoActual.stock !== undefined ? Number(productoActual.stock) : STOCK_POR_DEFECTO;
@@ -65,6 +75,24 @@ export const CartProvider = ({ children }) => {
       }
       return [...prevCart, { ...productoActual, stock: limiteMaximo, cantidad: 1 }];
     });
+
+    // Disparar notificación visual de éxito
+    mostrarNotificacion(`✅ "${productoActual.nombre}" se agregó correctamente al carrito.`);
+  };
+
+  // Función para agregar el premio del minijuego con precio $0
+  const agregarRegalo = (nombrePremio) => {
+    const regaloObj = {
+      id: `regalo-${Date.now()}`,
+      nombre: `🎁 Premio: ${nombrePremio}`,
+      precio: 0,
+      stock: 1,
+      cantidad: 1,
+      esRegalo: true
+    };
+
+    setCart((prevCart) => [...prevCart, regaloObj]);
+    mostrarNotificacion(`🎉 ¡Premio "${nombrePremio}" añadido gratis a tu carrito!`);
   };
 
   const eliminarDelCarrito = (id) => {
@@ -78,6 +106,12 @@ export const CartProvider = ({ children }) => {
       prevCart
         .map((item) => {
           if (item.id === id) {
+            // Si es un regalo de precio 0, no validamos stock estricto de inventario
+            if (item.esRegalo) {
+              const nuevaCantidad = item.cantidad + delta;
+              return nuevaCantidad > 0 ? { ...item, cantidad: nuevaCantidad } : item;
+            }
+
             const limiteMaximo =
               productoActual?.stock !== undefined
                 ? Number(productoActual.stock)
@@ -151,7 +185,6 @@ export const CartProvider = ({ children }) => {
       )
     );
 
-    // Ajustar cantidad en el carrito si el nuevo stock es menor a lo que el cliente ya tenía
     setCart((prevCart) =>
       prevCart
         .map((item) => {
@@ -205,6 +238,7 @@ export const CartProvider = ({ children }) => {
         totalDescuento,
         cantidadTotalCarrito,
         agregarAlCarrito,
+        agregarRegalo,
         eliminarDelCarrito,
         cambiarCantidad,
         vaciarCarrito,
@@ -216,6 +250,33 @@ export const CartProvider = ({ children }) => {
       }}
     >
       {children}
+
+      {/* Componente flotante global de notificación (Toast) */}
+      {notificacionCarrito && (
+        <div
+          className="position-fixed top-0 end-0 p-3"
+          style={{ zIndex: 3000, marginTop: '70px' }}
+        >
+          <div
+            className="toast show align-items-center text-bg-success border-0 shadow-lg rounded-pill px-4 py-2"
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            <div className="d-flex align-items-center">
+              <div className="toast-body fw-semibold m-0 text-white">
+                {notificacionCarrito}
+              </div>
+              <button
+                type="button"
+                className="btn-close btn-close-white ms-2 m-auto"
+                aria-label="Cerrar"
+                onClick={() => setNotificacionCarrito(null)}
+              ></button>
+            </div>
+          </div>
+        </div>
+      )}
     </CartContext.Provider>
   );
 };

@@ -3,10 +3,18 @@ import { productosIniciales } from '../data/productos';
 
 const CartContext = createContext();
 
+export const useCart = () => useContext(CartContext);
+
 const STOCK_POR_DEFECTO = 10;
 
+const CUPONES_VALIDOS = {
+  FELICES50: 0.10,
+  MILSABORES10: 0.10,
+  PROFE100: 0.20,
+  DUOC2026: 0.15
+};
+
 export const CartProvider = ({ children }) => {
-  // Estado de productos persistente en localStorage (garantiza que cada uno tenga stock)
   const [productos, setProductos] = useState(() => {
     const guardados = localStorage.getItem('productos_milsabores');
     const listaBase = guardados ? JSON.parse(guardados) : (productosIniciales || []);
@@ -20,23 +28,25 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('productos_milsabores', JSON.stringify(productos));
   }, [productos]);
 
-  // Estado del Carrito y mensajes de límite
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try {
+      const guardado = localStorage.getItem('carrito_milsabores');
+      return guardado ? JSON.parse(guardado) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('carrito_milsabores', JSON.stringify(cart));
+  }, [cart]);
+
   const [mensajeStock, setMensajeStock] = useState('');
-  
-  // Estado para la notificación flotante (Toast) al agregar al carrito
   const [notificacionCarrito, setNotificacionCarrito] = useState(null);
 
-  // Estado de Cupones / Descuentos
   const [cupon, setCupon] = useState('');
   const [descuento, setDescuento] = useState(0);
   const [mensajeCupon, setMensajeCupon] = useState('');
-
-  const cuponesValidos = {
-    'MILSABORES10': 0.10,
-    'PROFE100': 0.20,
-    'DUOC2026': 0.15
-  };
 
   const mostrarAvisoStock = (texto) => {
     setMensajeStock(texto);
@@ -52,10 +62,10 @@ export const CartProvider = ({ children }) => {
     }, 3000);
   };
 
-  // Funciones del Carrito con validación de límite máximo y notificación
   const agregarAlCarrito = (producto) => {
     const productoActual = productos.find((p) => p.id === producto.id) || producto;
-    const limiteMaximo = productoActual.stock !== undefined ? Number(productoActual.stock) : STOCK_POR_DEFECTO;
+    const limiteMaximo =
+      productoActual.stock !== undefined ? Number(productoActual.stock) : STOCK_POR_DEFECTO;
 
     if (limiteMaximo <= 0) {
       mostrarAvisoStock(`El producto "${productoActual.nombre}" se encuentra sin stock disponible.`);
@@ -63,36 +73,39 @@ export const CartProvider = ({ children }) => {
     }
 
     setCart((prevCart) => {
-      const existe = prevCart.find((item) => item.id === productoActual.id);
+      const existe = prevCart.find((item) => item.id === productoActual.id && !item.esRegalo);
       if (existe) {
         if (existe.cantidad >= limiteMaximo) {
-          mostrarAvisoStock(`Has alcanzado el límite máximo de ${limiteMaximo} unidades para "${productoActual.nombre}".`);
+          mostrarAvisoStock(
+            `Has alcanzado el límite máximo de ${limiteMaximo} unidades para "${productoActual.nombre}".`
+          );
           return prevCart;
         }
         return prevCart.map((item) =>
-          item.id === productoActual.id ? { ...item, cantidad: item.cantidad + 1, stock: limiteMaximo } : item
+          item.id === productoActual.id && !item.esRegalo
+            ? { ...item, cantidad: item.cantidad + 1, stock: limiteMaximo }
+            : item
         );
       }
       return [...prevCart, { ...productoActual, stock: limiteMaximo, cantidad: 1 }];
     });
 
-    // Disparar notificación visual de éxito
-    mostrarNotificacion(`✅ "${productoActual.nombre}" se agregó correctamente al carrito.`);
+    mostrarNotificacion(`"${productoActual.nombre}" se agregó correctamente al carrito.`);
   };
 
-  // Función para agregar el premio del minijuego con precio $0
-  const agregarRegalo = (nombrePremio) => {
+  const agregarRegalo = (nombrePremio, etiqueta = 'Premio Cake Tower') => {
     const regaloObj = {
       id: `regalo-${Date.now()}`,
-      nombre: `🎁 Premio: ${nombrePremio}`,
+      nombre: `🎁 ${etiqueta}: ${nombrePremio}`,
       precio: 0,
       stock: 1,
       cantidad: 1,
-      esRegalo: true
+      esRegalo: true,
+      etiquetaRegalo: etiqueta
     };
 
     setCart((prevCart) => [...prevCart, regaloObj]);
-    mostrarNotificacion(`🎉 ¡Premio "${nombrePremio}" añadido gratis a tu carrito!`);
+    mostrarNotificacion(`"${nombrePremio}" añadido gratis ($0) a tu carrito.`);
   };
 
   const eliminarDelCarrito = (id) => {
@@ -106,7 +119,6 @@ export const CartProvider = ({ children }) => {
       prevCart
         .map((item) => {
           if (item.id === id) {
-            // Si es un regalo de precio 0, no validamos stock estricto de inventario
             if (item.esRegalo) {
               const nuevaCantidad = item.cantidad + delta;
               return nuevaCantidad > 0 ? { ...item, cantidad: nuevaCantidad } : item;
@@ -115,7 +127,9 @@ export const CartProvider = ({ children }) => {
             const limiteMaximo =
               productoActual?.stock !== undefined
                 ? Number(productoActual.stock)
-                : (item.stock !== undefined ? Number(item.stock) : STOCK_POR_DEFECTO);
+                : item.stock !== undefined
+                ? Number(item.stock)
+                : STOCK_POR_DEFECTO;
 
             const nuevaCantidad = item.cantidad + delta;
 
@@ -138,21 +152,23 @@ export const CartProvider = ({ children }) => {
     setCupon('');
     setMensajeCupon('');
     setMensajeStock('');
+    localStorage.removeItem('carrito_milsabores');
   };
 
-  // Función para Aplicar Cupón
   const aplicarCupon = (codigo) => {
     const codigoUpper = codigo.trim().toUpperCase();
-    if (cuponesValidos[codigoUpper]) {
-      setDescuento(cuponesValidos[codigoUpper]);
+    if (CUPONES_VALIDOS[codigoUpper]) {
+      setDescuento(CUPONES_VALIDOS[codigoUpper]);
       setCupon(codigoUpper);
-      setMensajeCupon(`Cupón ${codigoUpper} aplicado con éxito (${cuponesValidos[codigoUpper] * 100}% desc)`);
+      setMensajeCupon(
+        `Cupón ${codigoUpper} aplicado con éxito (${Math.round(CUPONES_VALIDOS[codigoUpper] * 100)}% desc.)`
+      );
     } else {
-      setMensajeCupon('Código de cupón inválido');
+      setMensajeCupon('Código de cupón inválido. Prueba con FELICES50 o MILSABORES10.');
     }
   };
 
-  // Funciones del Panel de Administración (CRUD Completo con Stock)
+  // Funciones CRUD de productos para Administración
   const agregarProductoAdmin = (nuevoProducto) => {
     const nuevo = {
       ...nuevoProducto,
@@ -160,18 +176,13 @@ export const CartProvider = ({ children }) => {
       codigo: nuevoProducto.codigo?.trim() || `MS-${Math.floor(100 + Math.random() * 900)}`,
       imagen: nuevoProducto.imagen?.trim() || '/img/product_1.avif',
       tamano: nuevoProducto.tamano || 'mediano',
-      precio: Number(nuevoProducto.precio),
-      stock: nuevoProducto.stock !== undefined && nuevoProducto.stock !== '' ? Number(nuevoProducto.stock) : STOCK_POR_DEFECTO
+      precio: Number(nuevoProducto.precio) || 0,
+      stock: nuevoProducto.stock !== undefined ? Number(nuevoProducto.stock) : STOCK_POR_DEFECTO
     };
-    setProductos((prev) => [...prev, nuevo]);
+    setProductos((prev) => [nuevo, ...prev]);
   };
 
   const editarProductoAdmin = (id, datosActualizados) => {
-    const stockNuevo =
-      datosActualizados.stock !== undefined && datosActualizados.stock !== ''
-        ? Number(datosActualizados.stock)
-        : STOCK_POR_DEFECTO;
-
     setProductos((prev) =>
       prev.map((prod) =>
         prod.id === id
@@ -179,64 +190,49 @@ export const CartProvider = ({ children }) => {
               ...prod,
               ...datosActualizados,
               precio: Number(datosActualizados.precio),
-              stock: stockNuevo
+              stock:
+                datosActualizados.stock !== undefined
+                  ? Number(datosActualizados.stock)
+                  : prod.stock ?? STOCK_POR_DEFECTO
             }
           : prod
       )
-    );
-
-    setCart((prevCart) =>
-      prevCart
-        .map((item) => {
-          if (item.id === id) {
-            if (stockNuevo <= 0) return null;
-            return {
-              ...item,
-              ...datosActualizados,
-              precio: Number(datosActualizados.precio),
-              stock: stockNuevo,
-              cantidad: Math.min(item.cantidad, stockNuevo)
-            };
-          }
-          return item;
-        })
-        .filter(Boolean)
     );
   };
 
   const eliminarProductoAdmin = (id) => {
     setProductos((prev) => prev.filter((prod) => prod.id !== id));
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
   };
 
   const restaurarProductosIniciales = () => {
-    const restaurados = (productosIniciales || []).map((p) => ({
+    const listaBase = (productosIniciales || []).map((p) => ({
       ...p,
       stock: p.stock !== undefined ? Number(p.stock) : STOCK_POR_DEFECTO
     }));
-    setProductos(restaurados);
-    localStorage.setItem('productos_milsabores', JSON.stringify(restaurados));
+    setProductos(listaBase);
+    localStorage.setItem('productos_milsabores', JSON.stringify(listaBase));
   };
 
-  // Totales
-  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
-  const totalDescuento = subtotal * descuento;
-  const total = subtotal - totalDescuento;
-  const cantidadTotalCarrito = cart.reduce((acc, item) => acc + item.cantidad, 0);
+  const subtotal = cart.reduce(
+    (acc, item) => acc + (Number(item.precio) || 0) * (Number(item.cantidad) || 1),
+    0
+  );
+  const totalDescuento = subtotal * (descuento || 0);
+  const total = Math.max(0, subtotal - totalDescuento);
 
   return (
     <CartContext.Provider
       value={{
         productos,
         cart,
-        cupon,
+        subtotal,
         descuento,
+        cupon,
+        totalDescuento,
+        total,
         mensajeCupon,
         mensajeStock,
-        subtotal,
-        total,
-        totalDescuento,
-        cantidadTotalCarrito,
+        notificacionCarrito,
         agregarAlCarrito,
         agregarRegalo,
         eliminarDelCarrito,
@@ -250,35 +246,6 @@ export const CartProvider = ({ children }) => {
       }}
     >
       {children}
-
-      {/* Componente flotante global de notificación (Toast) */}
-      {notificacionCarrito && (
-        <div
-          className="position-fixed top-0 end-0 p-3"
-          style={{ zIndex: 3000, marginTop: '70px' }}
-        >
-          <div
-            className="toast show align-items-center text-bg-success border-0 shadow-lg rounded-pill px-4 py-2"
-            role="alert"
-            aria-live="assertive"
-            aria-atomic="true"
-          >
-            <div className="d-flex align-items-center">
-              <div className="toast-body fw-semibold m-0 text-white">
-                {notificacionCarrito}
-              </div>
-              <button
-                type="button"
-                className="btn-close btn-close-white ms-2 m-auto"
-                aria-label="Cerrar"
-                onClick={() => setNotificacionCarrito(null)}
-              ></button>
-            </div>
-          </div>
-        </div>
-      )}
     </CartContext.Provider>
   );
 };
-
-export const useCart = () => useContext(CartContext);

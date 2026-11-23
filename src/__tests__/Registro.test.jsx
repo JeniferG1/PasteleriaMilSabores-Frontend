@@ -1,8 +1,15 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Registro from '../views/Registro';
 import { AuthProvider } from '../context/AuthContext';
+
+vi.mock('../Services/axiosClient', () => ({
+  default: {
+    post: vi.fn(() => Promise.reject(new Error('Backend no disponible en test'))),
+    defaults: { headers: { common: {} } }
+  }
+}));
 
 const renderRegistro = () => {
   return render(
@@ -33,7 +40,7 @@ describe('Registro Component Unit Tests', () => {
     expect(screen.getByRole('option', { name: 'Temuco' })).toBeInTheDocument();
   });
 
-  it('debe asignar 50% de descuento permanente a usuarios mayores de 50 años', () => {
+  it('debe asignar 50% de descuento permanente a usuarios mayores de 50 años', async () => {
     const { container } = renderRegistro();
 
     fireEvent.change(container.querySelector('input[name="nombre"]'), {
@@ -60,9 +67,11 @@ describe('Registro Component Unit Tests', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Registrarse/i }));
 
-    const sesion = JSON.parse(localStorage.getItem('sesion_milsabores'));
-    expect(sesion).not.toBeNull();
-    expect(sesion.esSenior).toBe(true);
-    expect(sesion.descuento).toBe(0.5);
+    await waitFor(() => {
+      const sesion = JSON.parse(localStorage.getItem('sesion_milsabores'));
+      expect(sesion).not.toBeNull();
+      expect(sesion.esSenior).toBe(true);
+      expect(sesion.descuento).toBe(0.5);
+    });
   });
 });

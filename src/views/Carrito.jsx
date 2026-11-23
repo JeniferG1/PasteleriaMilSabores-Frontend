@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, esCorreoDuoc } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import CakeTower from '../components/CakeTower'; 
+import CakeTower from '../components/CakeTower';
+
+const esCumpleanosHoy = (fechaNacimiento) => {
+  if (!fechaNacimiento) return false;
+  const hoy = new Date();
+  const partes = fechaNacimiento.split('-');
+  if (partes.length < 3) return false;
+  const mesNac = Number(partes[1]);
+  const diaNac = Number(partes[2]);
+  return hoy.getMonth() + 1 === mesNac && hoy.getDate() === diaNac;
+};
 
 export default function Carrito() {
   const {
@@ -22,7 +32,6 @@ export default function Carrito() {
   const navigate = useNavigate();
   const [inputCupon, setInputCupon] = useState('');
 
-  // Estados para Checkout
   const [mostrarCheckout, setMostrarCheckout] = useState(false);
   const [compraExitosa, setCompraExitosa] = useState(null);
   const [erroresCheckout, setErroresCheckout] = useState({});
@@ -39,7 +48,6 @@ export default function Carrito() {
     cvvTarjeta: ''
   });
 
-  // Autocompletado si el usuario inició sesión
   useEffect(() => {
     if (usuarioLogueado) {
       setDatosEnvio((prev) => ({
@@ -56,11 +64,27 @@ export default function Carrito() {
     aplicarCupon(inputCupon);
   };
 
-  // Cálculo del Descuento Senior (50%)
-  const tieneDescuentoSenior = Boolean(usuarioLogueado?.esSenior || usuarioLogueado?.descuento === 0.5);
+  // Reglas de negocio: Descuento Senior 50% y Beneficio Cumpleaños Duoc UC
+  const tieneDescuentoSenior = Boolean(
+    usuarioLogueado?.esSenior || usuarioLogueado?.descuento === 0.5
+  );
   const descuentoSeniorMonto = tieneDescuentoSenior ? subtotal * 0.5 : 0;
   const totalDescuentosAcumulados = (totalDescuento || 0) + descuentoSeniorMonto;
   const totalPagar = Math.max(0, subtotal - totalDescuentosAcumulados);
+
+  const esUsuarioDuoc = Boolean(
+    usuarioLogueado?.esDuoc || esCorreoDuoc(usuarioLogueado?.email || '')
+  );
+  const estaDeCumpleanosDuoc =
+    esUsuarioDuoc && esCumpleanosHoy(usuarioLogueado?.fechaNacimiento);
+  const yaReclamoTortaCumpleanos = cart.some(
+    (item) => item.etiquetaRegalo === 'Cumpleaños Duoc UC'
+  );
+
+  const handleReclamarTortaCumpleanos = () => {
+    if (!estaDeCumpleanosDuoc || yaReclamoTortaCumpleanos) return;
+    agregarRegalo('Torta Especial de Cumpleaños', 'Cumpleaños Duoc UC');
+  };
 
   const handleCheckoutChange = (e) => {
     const { name, value } = e.target;
@@ -89,10 +113,13 @@ export default function Carrito() {
       setErroresCheckout({ ...erroresCheckout, [name]: '' });
     }
   };
-const validarCheckout = () => {
+
+  const validarCheckout = () => {
     const errores = {};
     if (!datosEnvio.nombre.trim()) errores.nombre = 'El nombre de quien recibe es obligatorio.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosEnvio.email)) errores.email = 'Correo inválido.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(datosEnvio.email)) {
+      errores.email = 'Correo inválido.';
+    }
     if (!/^\+?56?\s?9\d{8}$/.test(datosEnvio.telefono.replace(/\s/g, ''))) {
       errores.telefono = 'Ingresa un celular chileno válido (Ej: 912345678).';
     }
@@ -142,37 +169,45 @@ const validarCheckout = () => {
       items: [...cart]
     };
 
+    const historialPrevio = JSON.parse(localStorage.getItem('boletas_milsabores') || '[]');
+    localStorage.setItem(
+      'boletas_milsabores',
+      JSON.stringify([resumenOrden, ...historialPrevio])
+    );
+
     setCompraExitosa(resumenOrden);
     vaciarCarrito();
   };
 
   const handleProcederPagoClick = () => {
     if (!usuarioLogueado) {
-      alert('🔒 Debes iniciar sesión o registrarte para realizar una compra.');
+      alert('Debes iniciar sesión o registrarte para realizar una compra.');
       navigate('/login');
       return;
     }
     setMostrarCheckout(true);
   };
 
-  // Verificar si ya reclamó un regalo en este carrito para evitar duplicados
-  const yaTieneRegalo = cart.some((item) => item.esRegalo);
+  const yaTieneRegaloJuego = cart.some(
+    (item) => item.esRegalo && item.etiquetaRegalo !== 'Cumpleaños Duoc UC'
+  );
 
-  // Vista de Comprobante / Boleta tras pagar
   if (compraExitosa) {
     return (
       <div className="container py-5">
         <div className="card border-0 shadow-sm p-5 mx-auto text-center" style={{ maxWidth: '650px' }}>
-          <h2 className="fw-bold text-success mb-2">¡Pedido Confirmado con Éxito! 🎉</h2>
+          <h2 className="fw-bold text-success mb-2">¡Pedido Confirmado con Éxito!</h2>
           <p className="text-muted mb-4">
-            Orden N° <strong>{compraExitosa.numeroOrden}</strong>
+            Boleta / Orden N° <strong>{compraExitosa.numeroOrden}</strong>
           </p>
 
           <div className="bg-light p-4 rounded-3 text-start mb-4">
             <p className="mb-1"><strong>Cliente:</strong> {compraExitosa.cliente}</p>
             <p className="mb-1"><strong>Dirección de envío:</strong> {compraExitosa.direccion}</p>
             <p className="mb-1"><strong>Fecha programada:</strong> {compraExitosa.fechaEntrega}</p>
-            <p className="mb-1"><strong>Método de pago:</strong> Tarjeta terminada en **** {compraExitosa.tarjetaTerminadaEn}</p>
+            <p className="mb-1">
+              <strong>Método de pago:</strong> Tarjeta terminada en **** {compraExitosa.tarjetaTerminadaEn}
+            </p>
             {compraExitosa.dedicatoria && (
               <p className="mb-1"><strong>Mensaje en torta:</strong> "{compraExitosa.dedicatoria}"</p>
             )}
@@ -182,7 +217,11 @@ const validarCheckout = () => {
               {compraExitosa.items.map((prod) => (
                 <li key={prod.id} className="d-flex justify-content-between">
                   <span>{prod.cantidad}x {prod.nombre}</span>
-                  <span>{prod.precio === 0 ? 'GRATIS' : `$${(prod.precio * prod.cantidad).toLocaleString('es-CL')}`}</span>
+                  <span>
+                    {prod.precio === 0
+                      ? 'GRATIS ($0)'
+                      : `$${(prod.precio * prod.cantidad).toLocaleString('es-CL')}`}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -200,14 +239,15 @@ const validarCheckout = () => {
     );
   }
 
-  // Vista Carrito Vacío
   if (!cart || cart.length === 0) {
     return (
       <div className="container-xxl py-5">
         <div className="container text-center py-5">
           <div className="p-5 bg-light rounded-3 shadow-sm mx-auto" style={{ maxWidth: '600px' }}>
             <h2 className="mb-3 fw-bold">Tu Carrito está Vacío</h2>
-            <p className="text-muted mb-4">Añade algunos productos de nuestra pastelería para comenzar.</p>
+            <p className="text-muted mb-4">
+              Añade algunos productos de nuestra pastelería para comenzar.
+            </p>
             <Link to="/" className="btn btn-primary rounded-pill py-3 px-5 fw-bold">
               Ver Productos
             </Link>
@@ -222,9 +262,31 @@ const validarCheckout = () => {
       <div className="container">
         <div className="text-center mx-auto mb-5" style={{ maxWidth: '600px' }}>
           <h1 className="display-6 mb-3 fw-bold">Carrito de Compras</h1>
-          <p className="text-muted">Revisa tus productos seleccionados, juega por un postre gratis y completa tu entrega</p>
+          <p className="text-muted">
+            Revisa tus productos seleccionados, juega por un postre gratis y completa tu entrega
+          </p>
           <hr className="w-25 mx-auto bg-primary" />
         </div>
+
+        {esUsuarioDuoc && (
+          <div className="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div>
+              <strong>🎓 Beneficio Estudiante/Comunidad Duoc UC:</strong>{' '}
+              {estaDeCumpleanosDuoc
+                ? '¡Hoy es tu cumpleaños! Tienes disponible una Torta Especial de Cumpleaños gratis ($0).'
+                : 'Al registrarte con correo institucional Duoc UC tienes torta gratis en el día de tu cumpleaños.'}
+            </div>
+            {estaDeCumpleanosDuoc && !yaReclamoTortaCumpleanos && (
+              <button
+                type="button"
+                className="btn btn-sm btn-primary fw-bold rounded-pill px-3"
+                onClick={handleReclamarTortaCumpleanos}
+              >
+                Reclamar Torta Gratis ($0)
+              </button>
+            )}
+          </div>
+        )}
 
         {mensajeStock && (
           <div className="alert alert-warning fw-semibold text-center" role="alert">
@@ -233,7 +295,6 @@ const validarCheckout = () => {
         )}
 
         <div className="row g-4">
-          {/* Columna Izquierda: Tabla + Minijuego Pre-Pago + Formulario Checkout */}
           <div className="col-lg-8">
             <div className="card shadow-sm border-0 p-4 mb-4">
               <div className="table-responsive">
@@ -257,7 +318,9 @@ const validarCheckout = () => {
                           <td>
                             <div className="fw-bold">{item.nombre}</div>
                             {item.esRegalo ? (
-                              <span className="badge bg-success">Premio Cake Tower</span>
+                              <span className="badge bg-success">
+                                {item.etiquetaRegalo || 'Premio Cake Tower'}
+                              </span>
                             ) : (
                               <small className="text-muted">Máx. {limiteMaximo} unid. por pedido</small>
                             )}
@@ -275,6 +338,7 @@ const validarCheckout = () => {
                             ) : (
                               <div className="d-flex align-items-center justify-content-center">
                                 <button
+                                  type="button"
                                   className="btn btn-sm btn-outline-secondary px-2"
                                   onClick={() => cambiarCantidad(item.id, -1)}
                                 >
@@ -282,10 +346,15 @@ const validarCheckout = () => {
                                 </button>
                                 <span className="mx-3 fw-bold">{item.cantidad}</span>
                                 <button
+                                  type="button"
                                   className="btn btn-sm btn-outline-secondary px-2"
                                   onClick={() => cambiarCantidad(item.id, 1)}
                                   disabled={alcanzoLimite}
-                                  title={alcanzoLimite ? `Límite máximo de ${limiteMaximo} unidades alcanzado` : 'Aumentar cantidad'}
+                                  title={
+                                    alcanzoLimite
+                                      ? `Límite máximo de ${limiteMaximo} unidades alcanzado`
+                                      : 'Aumentar cantidad'
+                                  }
                                 >
                                   +
                                 </button>
@@ -301,6 +370,7 @@ const validarCheckout = () => {
                           </td>
                           <td className="text-center">
                             <button
+                              type="button"
                               className="btn btn-sm btn-outline-danger"
                               onClick={() => eliminarDelCarrito(item.id)}
                               title="Eliminar producto"
@@ -315,19 +385,24 @@ const validarCheckout = () => {
                 </table>
               </div>
               <div className="d-flex justify-content-end mt-3">
-                <button className="btn btn-outline-danger rounded-pill px-4" onClick={vaciarCarrito}>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger rounded-pill px-4"
+                  onClick={vaciarCarrito}
+                >
                   Vaciar Carrito
                 </button>
               </div>
             </div>
 
-            {/* SECCIÓN DEL MINIJUEGO ANTES DE PAGAR (SOLO CLIENTES LOGUEADOS) */}
             {!mostrarCheckout && (
               <div className="card shadow-sm border border-warning p-4 mb-4 bg-white">
                 {usuarioLogueado ? (
-                  yaTieneRegalo ? (
+                  yaTieneRegaloJuego ? (
                     <div className="text-center py-3">
-                      <h5 className="fw-bold text-success mb-1">🎉 ¡Ya añadiste tu premio gratis a esta compra!</h5>
+                      <h5 className="fw-bold text-success mb-1">
+                        ¡Ya añadiste tu premio gratis a esta compra!
+                      </h5>
                       <p className="text-muted small mb-0">
                         Tu postre de regalo aparece listado arriba con valor $0. Procede al pago cuando estés listo.
                       </p>
@@ -335,7 +410,7 @@ const validarCheckout = () => {
                   ) : (
                     <div className="text-center">
                       <span className="badge bg-warning text-dark mb-2 px-3 py-1 rounded-pill fw-bold">
-                        🎮 Beneficio Exclusivo Clientes
+                        Beneficio Exclusivo Clientes
                       </span>
                       <h4 className="fw-bold mb-2">¡Gana un Postre Gratis para esta Compra!</h4>
                       <p className="text-muted small mb-3">
@@ -346,7 +421,7 @@ const validarCheckout = () => {
                   )
                 ) : (
                   <div className="text-center py-3">
-                    <h5 className="fw-bold mb-2">🔒 ¿Quieres llevarte un postre gratis en tu pedido?</h5>
+                    <h5 className="fw-bold mb-2">¿Quieres llevarte un postre gratis en tu pedido?</h5>
                     <p className="text-muted small mb-3">
                       Inicia sesión como cliente para desbloquear el minijuego <strong>Cake Tower</strong> antes de pagar.
                     </p>
@@ -358,7 +433,6 @@ const validarCheckout = () => {
               </div>
             )}
 
-            {/* Formulario de Checkout Desplegable */}
             {mostrarCheckout && (
               <div className="card shadow-sm border-0 p-4 mb-4 bg-white">
                 <h4 className="fw-bold mb-3">Datos de Despacho y Entrega</h4>
@@ -373,7 +447,9 @@ const validarCheckout = () => {
                         value={datosEnvio.nombre}
                         onChange={handleCheckoutChange}
                       />
-                      {erroresCheckout.nombre && <div className="invalid-feedback">{erroresCheckout.nombre}</div>}
+                      {erroresCheckout.nombre && (
+                        <div className="invalid-feedback">{erroresCheckout.nombre}</div>
+                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -385,7 +461,9 @@ const validarCheckout = () => {
                         value={datosEnvio.email}
                         onChange={handleCheckoutChange}
                       />
-                      {erroresCheckout.email && <div className="invalid-feedback">{erroresCheckout.email}</div>}
+                      {erroresCheckout.email && (
+                        <div className="invalid-feedback">{erroresCheckout.email}</div>
+                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -398,7 +476,9 @@ const validarCheckout = () => {
                         value={datosEnvio.telefono}
                         onChange={handleCheckoutChange}
                       />
-                      {erroresCheckout.telefono && <div className="invalid-feedback">{erroresCheckout.telefono}</div>}
+                      {erroresCheckout.telefono && (
+                        <div className="invalid-feedback">{erroresCheckout.telefono}</div>
+                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -420,7 +500,9 @@ const validarCheckout = () => {
                         <option value="Temuco">Temuco</option>
                         <option value="Chillán">Chillán</option>
                       </select>
-                      {erroresCheckout.comuna && <div className="invalid-feedback">{erroresCheckout.comuna}</div>}
+                      {erroresCheckout.comuna && (
+                        <div className="invalid-feedback">{erroresCheckout.comuna}</div>
+                      )}
                     </div>
 
                     <div className="col-md-8">
@@ -433,7 +515,9 @@ const validarCheckout = () => {
                         value={datosEnvio.direccion}
                         onChange={handleCheckoutChange}
                       />
-                      {erroresCheckout.direccion && <div className="invalid-feedback">{erroresCheckout.direccion}</div>}
+                      {erroresCheckout.direccion && (
+                        <div className="invalid-feedback">{erroresCheckout.direccion}</div>
+                      )}
                     </div>
 
                     <div className="col-md-4">
@@ -451,11 +535,13 @@ const validarCheckout = () => {
                     </div>
 
                     <div className="col-12">
-                      <label className="form-label fw-semibold">Mensaje / Dedicatoria en la torta (Opcional)</label>
+                      <label className="form-label fw-semibold">
+                        Mensaje / Dedicatoria en la torta (Opcional, máx. 100 caracteres)
+                      </label>
                       <input
                         type="text"
                         name="dedicatoria"
-                        maxLength={50}
+                        maxLength={100}
                         placeholder="Ej: Feliz Cumpleaños Mamá"
                         className="form-control"
                         value={datosEnvio.dedicatoria}
@@ -464,9 +550,8 @@ const validarCheckout = () => {
                     </div>
                   </div>
 
-                  {/* Sección de Pago con Tarjeta */}
                   <hr className="my-4" />
-                  <h4 className="fw-bold mb-3">Método de Pago 💳</h4>
+                  <h4 className="fw-bold mb-3">Método de Pago</h4>
                   <div className="row g-3">
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Número de Tarjeta *</label>
@@ -517,7 +602,10 @@ const validarCheckout = () => {
                     </div>
                   </div>
 
-                  <button type="submit" className="btn btn-success w-100 py-3 rounded-pill fw-bold mt-4 shadow-sm">
+                  <button
+                    type="submit"
+                    className="btn btn-success w-100 py-3 rounded-pill fw-bold mt-4 shadow-sm"
+                  >
                     Confirmar y Pagar ${totalPagar.toLocaleString('es-CL')}
                   </button>
                 </form>
@@ -525,7 +613,6 @@ const validarCheckout = () => {
             )}
           </div>
 
-          {/* Columna Derecha: Resumen y Cupones */}
           <div className="col-lg-4">
             <div className="card border-0 shadow-sm p-4 mb-4">
               <h5 className="fw-bold mb-3">Cupón de Descuento</h5>
@@ -533,7 +620,7 @@ const validarCheckout = () => {
                 <input
                   type="text"
                   className="form-control me-2"
-                  placeholder="Ej: MILSABORES10"
+                  placeholder="Ej: FELICES50"
                   value={inputCupon}
                   onChange={(e) => setInputCupon(e.target.value)}
                 />
@@ -543,7 +630,7 @@ const validarCheckout = () => {
               </form>
               {mensajeCupon && (
                 <small
-                  className={`mt-2 fw-bold ${
+                  className={`mt-2 d-block fw-bold ${
                     mensajeCupon.includes('éxito') || mensajeCupon.includes('aplicado')
                       ? 'text-success'
                       : 'text-danger'
@@ -552,7 +639,9 @@ const validarCheckout = () => {
                   {mensajeCupon}
                 </small>
               )}
-              <small className="text-muted mt-2">Prueba cupones: <b>MILSABORES10</b>, <b>DUOC2026</b></small>
+              <small className="text-muted mt-2 d-block">
+                Prueba cupones: <b>FELICES50</b>, <b>MILSABORES10</b>, <b>DUOC2026</b>
+              </small>
             </div>
 
             <div className="card border-0 shadow-sm p-4">
@@ -591,6 +680,7 @@ const validarCheckout = () => {
 
               {!mostrarCheckout && (
                 <button
+                  type="button"
                   className="btn btn-success w-100 py-3 rounded-pill fw-bold shadow-sm"
                   onClick={handleProcederPagoClick}
                 >

@@ -1,8 +1,15 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import Login from '../views/Login';
 import { AuthProvider } from '../context/AuthContext';
+
+vi.mock('../Services/axiosClient', () => ({
+  default: {
+    post: vi.fn(() => Promise.reject(new Error('Backend no disponible en test'))),
+    defaults: { headers: { common: {} } }
+  }
+}));
 
 const renderLogin = () => {
   return render(
@@ -35,21 +42,21 @@ describe('Login Component Unit Tests', () => {
     expect(screen.getByText(/Por favor ingresa tu correo y contraseña/i)).toBeInTheDocument();
   });
 
-  it('debe mostrar error con credenciales incorrectas', () => {
+  it('debe mostrar error con credenciales incorrectas', async () => {
     renderLogin();
 
     fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), {
       target: { value: 'noexiste@correo.cl' }
     });
     fireEvent.change(screen.getByLabelText(/Contraseña/i), {
-      target: { value: 'claveincorrecta' }
+      target: { value: 'clave123' }
     });
     fireEvent.click(screen.getByRole('button', { name: /Ingresar/i }));
 
-    expect(screen.getByText(/Correo o contraseña incorrectos/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Correo o contraseña incorrectos/i)).toBeInTheDocument();
   });
 
-  it('debe iniciar sesión correctamente con las credenciales de administrador', () => {
+  it('debe iniciar sesión correctamente con las credenciales de administrador', async () => {
     renderLogin();
 
     fireEvent.change(screen.getByLabelText(/Correo Electrónico/i), {
@@ -60,8 +67,10 @@ describe('Login Component Unit Tests', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Ingresar/i }));
 
-    const sesion = JSON.parse(localStorage.getItem('sesion_milsabores'));
-    expect(sesion).not.toBeNull();
-    expect(sesion.rol).toBe('admin');
+    await waitFor(() => {
+      const sesion = JSON.parse(localStorage.getItem('sesion_milsabores'));
+      expect(sesion).not.toBeNull();
+      expect(sesion.rol).toBe('admin');
+    });
   });
 });

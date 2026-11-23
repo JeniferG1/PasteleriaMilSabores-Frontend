@@ -10,7 +10,7 @@ export default function Login() {
   const { loginUsuario } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -19,14 +19,19 @@ export default function Login() {
       return;
     }
 
-    const resultado = loginUsuario(email, password);
+    if (password.length < 4 || password.length > 10) {
+      setError('La contraseña debe tener entre 4 y 10 caracteres.');
+      return;
+    }
+
+    const resultado = await loginUsuario(email, password);
 
     if (!resultado.success) {
       setError(resultado.message);
       return;
     }
 
-    if (resultado.usuario?.rol === 'admin') {
+    if (resultado.usuario?.rol === 'admin' || resultado.usuario?.rol === 'vendedor') {
       navigate('/admin');
     } else {
       navigate('/');
@@ -54,6 +59,7 @@ export default function Login() {
                 <input
                   id="login-email"
                   type="email"
+                  maxLength={100}
                   className="form-control"
                   placeholder="correo@ejemplo.cl"
                   value={email}
@@ -68,8 +74,10 @@ export default function Login() {
                 <input
                   id="login-password"
                   type="password"
+                  minLength={4}
+                  maxLength={10}
                   className="form-control"
-                  placeholder="Ingresa tu contraseña"
+                  placeholder="Entre 4 y 10 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

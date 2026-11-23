@@ -1,7 +1,18 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Admin from '../views/Admin';
 import { CartProvider } from '../context/CartContext';
+
+vi.mock('../components/RichTextEditor', () => ({
+  default: ({ value, onChange, placeholder }) => (
+    <textarea
+      data-testid="rich-text-editor"
+      value={value || ''}
+      placeholder={placeholder || 'Descripción'}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  )
+}));
 
 const renderAdmin = () => {
   return render(
@@ -34,7 +45,9 @@ describe('Admin Component Unit Tests', () => {
     fireEvent.change(screen.getByPlaceholderText('45000'), {
       target: { value: '38000' }
     });
-    fireEvent.change(screen.getByPlaceholderText(/Describe ingredientes/i), {
+
+    const editores = screen.getAllByTestId('rich-text-editor');
+    fireEvent.change(editores[0], {
       target: { value: 'Bizcocho de chocolate con crema y guindas.' }
     });
 

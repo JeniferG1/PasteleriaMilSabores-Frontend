@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, esCorreoDuoc } from '../context/AuthContext';
 import { regionesComunas, nombresRegiones } from '../data/regionesComunas';
 
 export default function Registro() {
@@ -20,7 +20,6 @@ export default function Registro() {
   const { registrarUsuario } = useAuth();
   const navigate = useNavigate();
 
-  // Comunas dinámicas directamente desde el objeto regionesComunas
   const comunasDisponibles = formData.region ? regionesComunas[formData.region] || [] : [];
 
   const calcularEdad = (fechaNac) => {
@@ -37,7 +36,6 @@ export default function Registro() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Al cambiar la región, reinicia la comuna seleccionada
     if (name === 'region') {
       setFormData({ ...formData, region: value, comuna: '' });
       setErrores({ ...errores, region: '', comuna: '' });
@@ -54,12 +52,12 @@ export default function Registro() {
     const nuevosErrores = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!formData.nombre.trim() || formData.nombre.trim().length < 3) {
-      nuevosErrores.nombre = 'El nombre debe tener al menos 3 caracteres.';
+    if (!formData.nombre.trim() || formData.nombre.trim().length < 3 || formData.nombre.trim().length > 100) {
+      nuevosErrores.nombre = 'El nombre debe tener entre 3 y 100 caracteres.';
     }
 
-    if (!emailRegex.test(formData.email)) {
-      nuevosErrores.email = 'Ingresa un correo electrónico válido.';
+    if (!emailRegex.test(formData.email) || formData.email.length > 100) {
+      nuevosErrores.email = 'Ingresa un correo electrónico válido (máx. 100 caracteres).';
     }
 
     if (!formData.fechaNacimiento) {
@@ -81,8 +79,8 @@ export default function Registro() {
       nuevosErrores.comuna = 'Selecciona tu comuna.';
     }
 
-    if (formData.password.length < 6) {
-      nuevosErrores.password = 'La contraseña debe tener al menos 6 caracteres.';
+    if (formData.password.length < 4 || formData.password.length > 10) {
+      nuevosErrores.password = 'La contraseña debe tener entre 4 y 10 caracteres.';
     }
 
     if (formData.password !== formData.confirmarPassword) {
@@ -93,12 +91,13 @@ export default function Registro() {
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarFormulario()) return;
 
     const edad = calcularEdad(formData.fechaNacimiento);
     const tieneDescuentoSenior = edad >= 50;
+    const tieneBeneficioDuoc = esCorreoDuoc(formData.email);
 
     const nuevoUsuario = {
       nombre: formData.nombre.trim(),
@@ -109,27 +108,38 @@ export default function Registro() {
       password: formData.password,
       edad,
       esSenior: tieneDescuentoSenior,
+      esDuoc: tieneBeneficioDuoc,
       descuento: tieneDescuentoSenior ? 0.50 : 0,
       rol: 'cliente'
     };
 
-    const resultado = registrarUsuario(nuevoUsuario);
+    const resultado = await registrarUsuario(nuevoUsuario);
 
     if (!resultado.success) {
       setErrores({ ...errores, email: resultado.message });
       return;
     }
 
+    let beneficiosTexto = [];
+    if (tieneDescuentoSenior) {
+      beneficiosTexto.push('50% de descuento permanente por tener 50+ años');
+    }
+    if (tieneBeneficioDuoc) {
+      beneficiosTexto.push('torta gratis en tu cumpleaños por correo institucional Duoc UC');
+    }
+
     setMensajeExito(
-      tieneDescuentoSenior
-        ? '¡Cuenta creada! Por ser mayor de 50 años tienes un 50% de descuento permanente. Redirigiendo...'
+      beneficiosTexto.length > 0
+        ? `¡Cuenta creada! Beneficios activados: ${beneficiosTexto.join(' y ')}. Redirigiendo...`
         : '¡Cuenta creada con éxito! Redirigiendo al inicio...'
     );
 
     setTimeout(() => {
       navigate('/');
-    }, 2000);
+    }, 2200);
   };
+
+  const detectadoDuoc = esCorreoDuoc(formData.email);
 
   return (
     <div className="container py-5">
@@ -145,12 +155,12 @@ export default function Registro() {
             )}
 
             <form onSubmit={handleSubmit} noValidate>
-              {/* Nombre */}
               <div className="mb-3">
                 <label className="form-label fw-semibold">Nombre Completo</label>
                 <input
                   type="text"
                   name="nombre"
+                  maxLength={100}
                   className={`form-control ${errores.nombre ? 'is-invalid' : ''}`}
                   placeholder="Ej: Camila Soto"
                   value={formData.nombre}
@@ -159,21 +169,30 @@ export default function Registro() {
                 {errores.nombre && <div className="invalid-feedback">{errores.nombre}</div>}
               </div>
 
-              {/* Correo */}
               <div className="mb-3">
                 <label className="form-label fw-semibold">Correo Electrónico</label>
                 <input
                   type="email"
                   name="email"
+                  maxLength={100}
                   className={`form-control ${errores.email ? 'is-invalid' : ''}`}
-                  placeholder="correo@ejemplo.cl"
+                  placeholder="usuario@duoc.cl o correo@ejemplo.cl"
                   value={formData.email}
                   onChange={handleChange}
                 />
-                {errores.email && <div className="invalid-feedback">{errores.email}</div>}
+                {errores.email ? (
+                  <div className="invalid-feedback">{errores.email}</div>
+                ) : detectadoDuoc ? (
+                  <small className="text-success fw-semibold d-block mt-1">
+                    🎓 Correo Duoc UC detectado: ¡Torta gratis activada para tu cumpleaños!
+                  </small>
+                ) : (
+                  <small className="text-muted d-block mt-1">
+                    🎓 Si usas tu correo institucional Duoc UC (@duoc.cl / @duocuc.cl), obtienes una torta gratis en tu cumpleaños.
+                  </small>
+                )}
               </div>
 
-              {/* Fecha de Nacimiento */}
               <div className="mb-3">
                 <label className="form-label fw-semibold">Fecha de Nacimiento</label>
                 <input
@@ -192,7 +211,6 @@ export default function Registro() {
                 )}
               </div>
 
-              {/* Región y Comuna */}
               <div className="row g-3 mb-3">
                 <div className="col-md-6">
                   <label className="form-label fw-semibold">Región</label>
@@ -234,26 +252,28 @@ export default function Registro() {
                 </div>
               </div>
 
-              {/* Contraseña */}
               <div className="mb-3">
                 <label className="form-label fw-semibold">Contraseña</label>
                 <input
                   type="password"
                   name="password"
+                  minLength={4}
+                  maxLength={10}
                   className={`form-control ${errores.password ? 'is-invalid' : ''}`}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Entre 4 y 10 caracteres"
                   value={formData.password}
                   onChange={handleChange}
                 />
                 {errores.password && <div className="invalid-feedback">{errores.password}</div>}
               </div>
 
-              {/* Confirmar Contraseña */}
               <div className="mb-3">
                 <label className="form-label fw-semibold">Confirmar Contraseña</label>
                 <input
                   type="password"
                   name="confirmarPassword"
+                  minLength={4}
+                  maxLength={10}
                   className={`form-control ${errores.confirmarPassword ? 'is-invalid' : ''}`}
                   placeholder="Repite tu contraseña"
                   value={formData.confirmarPassword}

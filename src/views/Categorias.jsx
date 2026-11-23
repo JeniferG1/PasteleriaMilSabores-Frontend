@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { SellosNutricionales } from '../components/SellosNutricionales';
+import DOMPurify from 'dompurify';
 
 export default function Categorias() {
   const { productos, agregarAlCarrito } = useCart();
@@ -43,13 +44,13 @@ export default function Categorias() {
               style={{ borderRadius: '10px' }}
             >
               <option value="todas">Todas las categorías</option>
-              <option value="tortas-cuadradas"> Tortas Cuadradas</option>
-              <option value="tortas-circulares"> Tortas Circulares</option>
-              <option value="postres-individuales"> Postres Individuales</option>
-              <option value="sin-azucar"> Sin Azúcar</option>
-              <option value="tradicional"> Pastelería Tradicional</option>
-              <option value="sin-gluten"> Sin Gluten</option>
-              <option value="vegana"> Opciones Veganas</option>
+              <option value="tortas-cuadradas">Tortas Cuadradas</option>
+              <option value="tortas-circulares">Tortas Circulares</option>
+              <option value="postres-individuales">Postres Individuales</option>
+              <option value="sin-azucar">Sin Azúcar</option>
+              <option value="tradicional">Pastelería Tradicional</option>
+              <option value="sin-gluten">Sin Gluten</option>
+              <option value="vegana">Opciones Veganas</option>
               <option value="especiales">Especiales & Celebraciones</option>
             </select>
           </div>
@@ -71,7 +72,7 @@ export default function Categorias() {
                   <img 
                     className="w-100 h-100" 
                     style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }} 
-                    src={`/img/product_${prod.id}.jpg`} 
+                    src={prod.imagen || `/img/product_${prod.id}.jpg`} 
                     alt={prod.nombre} 
                     onError={(e) => {
                       e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(prod.nombre)}`;
@@ -93,7 +94,7 @@ export default function Categorias() {
                 <div className="text-center p-4 d-flex flex-column flex-grow-1">
                   {/* Título clickeable */}
                   <h5 
-                    className="mb-2 fw-bold"
+                    className="mb-2 fw-bold text-dark"
                     style={{ cursor: 'pointer' }}
                     onClick={() => setProductoSeleccionado(prod)}
                   >
@@ -103,7 +104,13 @@ export default function Categorias() {
                     ${Number(prod.precio).toLocaleString('es-CL')}
                   </span>
                   
-                  <p className="text-muted small mb-3 flex-grow-1">{prod.descripcion}</p>
+                  {/* Descripción enriquecida sanitizada en la tarjeta */}
+                  <div 
+                    className="text-muted small mb-3 flex-grow-1"
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(prod.descripcion || '') 
+                    }} 
+                  />
 
                   <div className="d-flex justify-content-center mb-3">
                     <SellosNutricionales nombreProducto={prod.nombre} />
@@ -160,7 +167,7 @@ export default function Categorias() {
                   {/* Imagen completa sin recortar */}
                   <div className="col-md-6 text-center bg-light rounded-3 p-3">
                     <img
-                      src={`/img/product_${productoSeleccionado.id}.jpg`}
+                      src={productoSeleccionado.imagen || `/img/product_${productoSeleccionado.id}.jpg`}
                       alt={productoSeleccionado.nombre}
                       className="img-fluid rounded-3"
                       style={{ maxHeight: '420px', width: '100%', objectFit: 'contain' }}
@@ -177,9 +184,14 @@ export default function Categorias() {
                       ${Number(productoSeleccionado.precio).toLocaleString('es-CL')}
                     </h4>
 
-                    <p className="text-muted mb-3" style={{ lineHeight: '1.6' }}>
-                      {productoSeleccionado.descripcion}
-                    </p>
+                    {/* Descripción enriquecida sanitizada en el Modal */}
+                    <div 
+                      className="text-muted mb-3" 
+                      style={{ lineHeight: '1.6' }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '') 
+                      }} 
+                    />
 
                     {productoSeleccionado.tamano && (
                       <p className="small text-secondary mb-2 text-capitalize">

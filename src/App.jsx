@@ -2,8 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Home from './views/Home';
 import Categorias from './views/Categorias';
+import Comunidad from './views/Comunidad'; // <-- Nueva importación
 import Carrito from './views/Carrito';
-import Premios from './views/Premios'; // <-- Nueva importación
 import Admin from './views/Admin';
 import Login from './views/Login';
 import Registro from './views/Registro';
@@ -26,7 +26,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/categorias" element={<Categorias />} />
-        <Route path="/premios" element={<Premios />} /> {/* <-- Nueva ruta */}
+        <Route path="/comunidad" element={<Comunidad />} /> {/* <-- Nueva ruta */}
         <Route path="/carrito" element={<Carrito />} />
         <Route
           path="/admin"
@@ -47,4 +47,3 @@ function App() {
 }
 
 export default App;
-

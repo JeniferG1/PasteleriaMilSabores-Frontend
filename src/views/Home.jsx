@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { SellosNutricionales } from '../components/SellosNutricionales';
 import axiosClient from '../Services/axiosClient';
+import DOMPurify from 'dompurify';
 
 export default function Home() {
   const { productos: productosContext, agregarAlCarrito } = useCart();
@@ -13,13 +14,26 @@ export default function Home() {
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   useEffect(() => {
+    // Si hay productos modificados en el contexto local (Admin), los priorizamos o combinamos
+    if (productosContext && productosContext.length > 0) {
+      setProductos(productosContext);
+      setCargando(false);
+    }
+
     axiosClient.get('/api/productos')
       .then((response) => {
-        setProductos(response.data);
+        if (response.data && response.data.length > 0) {
+          // Sincroniza descripciones editadas localmente en Admin si existen en productosContext
+          const sincronizados = response.data.map((prodApi) => {
+            const localMatch = productosContext?.find((p) => p.id === prodApi.id);
+            return localMatch ? { ...prodApi, ...localMatch } : prodApi;
+          });
+          setProductos(sincronizados);
+        }
         setCargando(false);
       })
       .catch((error) => {
-        console.error('Error al cargar productos desde AWS:', error);
+        console.error('Usando catálogo local:', error);
         setProductos(productosContext || []);
         setCargando(false);
       });
@@ -126,12 +140,17 @@ export default function Home() {
                       <img 
                         className="w-100 h-100" 
                         style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }} 
-                        src={`/img/product_${prod.id}.jpg`} 
+                        src={prod.imagen || `/img/product_${prod.id}.jpg`} 
                         alt={prod.nombre} 
                         onError={(e) => {
                           e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(prod.nombre)}`;
                         }}
                       />
+                      {prod.tamano && (
+                        <span className="badge bg-dark position-absolute top-0 end-0 m-3 text-capitalize px-3 py-2">
+                          {prod.tamano}
+                        </span>
+                      )}
                       <span 
                         className="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill"
                         style={{ fontSize: '0.75rem' }}
@@ -143,7 +162,7 @@ export default function Home() {
                     <div className="text-center p-4 d-flex flex-column flex-grow-1">
                       {/* Título clickeable */}
                       <h5 
-                        className="mb-2 fw-bold" 
+                        className="mb-2 fw-bold text-dark" 
                         style={{ cursor: 'pointer' }}
                         onClick={() => setProductoSeleccionado(prod)}
                       >
@@ -153,7 +172,13 @@ export default function Home() {
                         ${Number(prod.precio).toLocaleString('es-CL')}
                       </span>
                       
-                      <p className="text-muted small mb-3 flex-grow-1">{prod.descripcion}</p>
+                      {/* Descripción enriquecida con Tiptap + DOMPurify */}
+                      <div 
+                        className="text-muted small mb-3 flex-grow-1"
+                        dangerouslySetInnerHTML={{ 
+                          __html: DOMPurify.sanitize(prod.descripcion || '') 
+                        }} 
+                      />
 
                       <div className="d-flex justify-content-center mb-3">
                         <SellosNutricionales nombreProducto={prod.nombre} />
@@ -222,8 +247,10 @@ export default function Home() {
           >
             <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
               <div className="modal-header border-0 pb-0">
-                <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold">
-                  {productoSeleccionado.categoria?.nombre || 'Especialidad Artesanal'}
+                <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-semibold text-capitalize">
+                  {typeof productoSeleccionado.categoria === 'object'
+                    ? productoSeleccionado.categoria?.nombre
+                    : productoSeleccionado.categoria || 'Especialidad Artesanal'}
                 </span>
                 <button 
                   type="button" 
@@ -235,10 +262,10 @@ export default function Home() {
 
               <div className="modal-body p-4">
                 <div className="row g-4 align-items-center">
-                  {/* Imagen completa sin recortar (objectFit: 'contain') */}
+                  {/* Imagen completa sin recortar */}
                   <div className="col-md-6 text-center bg-light rounded-3 p-3">
                     <img
-                      src={`/img/product_${productoSeleccionado.id}.jpg`}
+                      src={productoSeleccionado.imagen || `/img/product_${productoSeleccionado.id}.jpg`}
                       alt={productoSeleccionado.nombre}
                       className="img-fluid rounded-3"
                       style={{ maxHeight: '420px', width: '100%', objectFit: 'contain' }}
@@ -255,9 +282,14 @@ export default function Home() {
                       ${Number(productoSeleccionado.precio).toLocaleString('es-CL')}
                     </h4>
 
-                    <p className="text-muted mb-3" style={{ lineHeight: '1.6' }}>
-                      {productoSeleccionado.descripcion}
-                    </p>
+                    {/* Descripción enriquecida sanitizada en el Modal */}
+                    <div 
+                      className="text-muted mb-3" 
+                      style={{ lineHeight: '1.6' }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '') 
+                      }} 
+                    />
 
                     {productoSeleccionado.stock !== undefined && (
                       <p className="small text-secondary mb-3">

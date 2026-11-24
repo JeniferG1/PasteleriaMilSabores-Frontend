@@ -6,15 +6,21 @@ import DOMPurify from 'dompurify';
 export default function Categorias() {
   const { productos, agregarAlCarrito } = useCart();
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('todas');
-  
+
   // Estado para el producto seleccionado en el Modal de Detalle
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
   // Filtrar productos según la categoría seleccionada
   const productosFiltrados = productos.filter((prod) => {
     if (categoriaSeleccionada === 'todas') return true;
-    return prod.categoria === categoriaSeleccionada;
+    const cat = typeof prod.categoria === 'object' ? prod.categoria?.nombre : prod.categoria;
+    return cat === categoriaSeleccionada;
   });
+
+  const handleImageError = (e, producto) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = `/img/product_${producto.id}.jpg`;
+  };
 
   return (
     <div className="container py-5">
@@ -63,27 +69,25 @@ export default function Categorias() {
             <div className="col-lg-4 col-md-6" key={prod.id}>
               <div className="card product-item bg-white rounded-3 shadow-sm h-100 overflow-hidden border-0">
                 {/* Contenedor de imagen clickeable */}
-                <div 
-                  className="position-relative overflow-hidden" 
+                <div
+                  className="position-relative overflow-hidden"
                   style={{ height: '250px', cursor: 'pointer' }}
                   onClick={() => setProductoSeleccionado(prod)}
                   title="Clic para ver imagen completa y detalles"
                 >
-                  <img 
-                    className="w-100 h-100" 
-                    style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }} 
-                    src={prod.imagen || `/img/product_${prod.id}.jpg`} 
-                    alt={prod.nombre} 
-                    onError={(e) => {
-                      e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(prod.nombre)}`;
-                    }}
+                  <img
+                    className="w-100 h-100"
+                    style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                    src={prod.imagen || `/img/product_${prod.id}.jpg`}
+                    alt={prod.nombre}
+                    onError={(e) => handleImageError(e, prod)}
                   />
                   {prod.tamano && (
                     <span className="badge bg-dark position-absolute top-0 end-0 m-3 text-capitalize px-3 py-2">
                       {prod.tamano}
                     </span>
                   )}
-                  <span 
+                  <span
                     className="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill"
                     style={{ fontSize: '0.75rem' }}
                   >
@@ -93,7 +97,7 @@ export default function Categorias() {
 
                 <div className="text-center p-4 d-flex flex-column flex-grow-1">
                   {/* Título clickeable */}
-                  <h5 
+                  <h5
                     className="mb-2 fw-bold text-dark"
                     style={{ cursor: 'pointer' }}
                     onClick={() => setProductoSeleccionado(prod)}
@@ -103,13 +107,13 @@ export default function Categorias() {
                   <span className="fw-bold fs-4 mb-3" style={{ color: '#d48b44' }}>
                     ${Number(prod.precio).toLocaleString('es-CL')}
                   </span>
-                  
+
                   {/* Descripción enriquecida sanitizada en la tarjeta */}
-                  <div 
+                  <div
                     className="text-muted small mb-3 flex-grow-1"
-                    dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(prod.descripcion || '') 
-                    }} 
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(prod.descripcion || '')
+                    }}
                   />
 
                   <div className="d-flex justify-content-center mb-3">
@@ -117,7 +121,7 @@ export default function Categorias() {
                   </div>
 
                   <div className="mt-auto">
-                    <button 
+                    <button
                       className="btn btn-warning rounded-pill py-2 px-4 w-100 fw-bold shadow-sm"
                       onClick={() => agregarAlCarrito(prod)}
                     >
@@ -137,13 +141,13 @@ export default function Categorias() {
 
       {/* MODAL DE DETALLE DEL PRODUCTO (FOTO COMPLETA + DESCRIPCIÓN) */}
       {productoSeleccionado && (
-        <div 
-          className="modal fade show d-block" 
-          tabIndex="-1" 
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1050 }}
           onClick={() => setProductoSeleccionado(null)}
         >
-          <div 
+          <div
             className="modal-dialog modal-dialog-centered modal-lg"
             onClick={(e) => e.stopPropagation()}
           >
@@ -154,9 +158,9 @@ export default function Categorias() {
                     ? productoSeleccionado.categoria?.nombre
                     : productoSeleccionado.categoria || 'Especialidad Artesanal'}
                 </span>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   aria-label="Cerrar"
                   onClick={() => setProductoSeleccionado(null)}
                 ></button>
@@ -171,9 +175,7 @@ export default function Categorias() {
                       alt={productoSeleccionado.nombre}
                       className="img-fluid rounded-3"
                       style={{ maxHeight: '420px', width: '100%', objectFit: 'contain' }}
-                      onError={(e) => {
-                        e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(productoSeleccionado.nombre)}`;
-                      }}
+                      onError={(e) => handleImageError(e, productoSeleccionado)}
                     />
                   </div>
 
@@ -185,12 +187,12 @@ export default function Categorias() {
                     </h4>
 
                     {/* Descripción enriquecida sanitizada en el Modal */}
-                    <div 
-                      className="text-muted mb-3" 
+                    <div
+                      className="text-muted mb-3"
                       style={{ lineHeight: '1.6' }}
-                      dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '') 
-                      }} 
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '')
+                      }}
                     />
 
                     {productoSeleccionado.tamano && (

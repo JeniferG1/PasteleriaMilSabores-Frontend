@@ -157,7 +157,7 @@ export let productosIniciales = [
     tamano: 'grande',
     nombre: 'Torta Especial de Boda',
     precio: 60000,
-    imagen: '/img/product_16.webp',
+    imagen: '/img/product_16.jpg',
     descripcion: 'Elegante y deliciosa, esta torta está diseñada para ser el centro de atención en cualquier boda.'
   }
 ];

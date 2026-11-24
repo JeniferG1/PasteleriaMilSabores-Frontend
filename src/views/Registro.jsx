@@ -188,7 +188,7 @@ export default function Registro() {
                   </small>
                 ) : (
                   <small className="text-muted d-block mt-1">
-                    🎓 Si usas tu correo institucional Duoc UC (@duoc.cl / @duocuc.cl), obtienes una torta gratis en tu cumpleaños.
+                     Ingresa tu correo institucional Duoc UC para obtener una torta gratis en tu cumpleaños.                          
                   </small>
                 )}
               </div>

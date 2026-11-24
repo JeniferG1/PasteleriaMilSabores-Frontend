@@ -9,7 +9,7 @@ export default function Home() {
   const { productos: productosContext, agregarAlCarrito } = useCart();
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
-  
+
   // Estado para el producto seleccionado en el Modal de Detalle
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
@@ -39,10 +39,15 @@ export default function Home() {
       });
   }, [productosContext]);
 
+  const handleImageError = (e, producto) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = `/img/product_${producto.id}.jpg`;
+  };
+
   return (
     <div className="container-fluid px-0">
       {/* Banner Principal */}
-      <div 
+      <div
         className="position-relative overflow-hidden text-white d-flex align-items-center"
         style={{
           backgroundImage: `linear-gradient(180deg, rgba(17, 17, 17, 0.65) 0%, rgba(17, 17, 17, 0.75) 100%), url('/img/portada4.jpg')`,
@@ -131,27 +136,25 @@ export default function Home() {
                 <div className="col-lg-4 col-md-6" key={prod.id}>
                   <div className="card product-item bg-white border-0 shadow-sm h-100 overflow-hidden rounded-3">
                     {/* Contenedor de imagen clickeable */}
-                    <div 
-                      className="position-relative overflow-hidden" 
+                    <div
+                      className="position-relative overflow-hidden"
                       style={{ height: '260px', cursor: 'pointer' }}
                       onClick={() => setProductoSeleccionado(prod)}
                       title="Clic para ver imagen completa y detalles"
                     >
-                      <img 
-                        className="w-100 h-100" 
-                        style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }} 
-                        src={prod.imagen || `/img/product_${prod.id}.jpg`} 
-                        alt={prod.nombre} 
-                        onError={(e) => {
-                          e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(prod.nombre)}`;
-                        }}
+                      <img
+                        className="w-100 h-100"
+                        style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                        src={prod.imagen || `/img/product_${prod.id}.jpg`}
+                        alt={prod.nombre}
+                        onError={(e) => handleImageError(e, prod)}
                       />
                       {prod.tamano && (
                         <span className="badge bg-dark position-absolute top-0 end-0 m-3 text-capitalize px-3 py-2">
                           {prod.tamano}
                         </span>
                       )}
-                      <span 
+                      <span
                         className="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill"
                         style={{ fontSize: '0.75rem' }}
                       >
@@ -161,8 +164,8 @@ export default function Home() {
 
                     <div className="text-center p-4 d-flex flex-column flex-grow-1">
                       {/* Título clickeable */}
-                      <h5 
-                        className="mb-2 fw-bold text-dark" 
+                      <h5
+                        className="mb-2 fw-bold text-dark"
                         style={{ cursor: 'pointer' }}
                         onClick={() => setProductoSeleccionado(prod)}
                       >
@@ -171,13 +174,13 @@ export default function Home() {
                       <span className="fw-bold fs-4 mb-3" style={{ color: '#d48b44' }}>
                         ${Number(prod.precio).toLocaleString('es-CL')}
                       </span>
-                      
+
                       {/* Descripción enriquecida con Tiptap + DOMPurify */}
-                      <div 
+                      <div
                         className="text-muted small mb-3 flex-grow-1"
-                        dangerouslySetInnerHTML={{ 
-                          __html: DOMPurify.sanitize(prod.descripcion || '') 
-                        }} 
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(prod.descripcion || '')
+                        }}
                       />
 
                       <div className="d-flex justify-content-center mb-3">
@@ -185,7 +188,7 @@ export default function Home() {
                       </div>
 
                       <div className="mt-auto">
-                        <button 
+                        <button
                           className="btn btn-warning rounded-pill py-2.5 px-4 w-100 fw-bold shadow-sm"
                           onClick={() => agregarAlCarrito(prod)}
                         >
@@ -200,8 +203,8 @@ export default function Home() {
 
             {/* Botón para ver el catálogo completo en Categorías */}
             <div className="text-center mt-5">
-              <Link 
-                to="/categorias" 
+              <Link
+                to="/categorias"
                 className="btn btn-outline-dark btn-lg rounded-pill px-5 py-3 fw-bold shadow-sm"
               >
                 Ver Catálogo Completo ({productos.length} productos) →
@@ -213,7 +216,7 @@ export default function Home() {
 
       {/* Banner Promocional de Cupones y Descuento Senior */}
       <div className="container py-5 mb-4">
-        <div 
+        <div
           className="p-5 rounded-4 shadow-sm text-center text-white"
           style={{
             background: 'linear-gradient(135deg, #2c1e16 0%, #5c3a21 100%)'
@@ -224,7 +227,7 @@ export default function Home() {
           </span>
           <h3 className="display-6 fw-bold mb-3">¡Endulza tus celebraciones con descuentos especiales!</h3>
           <p className="lead mb-4 mx-auto" style={{ maxWidth: '700px', opacity: 0.9 }}>
-            Usa los códigos <strong>MILSABORES10</strong> o <strong>DUOC2026</strong> en tu carrito de compras. 
+            Usa los códigos <strong>MILSABORES10</strong> o <strong>DUOC2026</strong> en tu carrito de compras.
             Además, si tienes más de 50 años, obtienes un <strong>50% de descuento automático</strong> en toda la tienda.
           </p>
           <Link to="/categorias" className="btn btn-warning btn-lg rounded-pill px-5 fw-bold shadow">
@@ -235,13 +238,13 @@ export default function Home() {
 
       {/* MODAL DE DETALLE DEL PRODUCTO (FOTO COMPLETA + DESCRIPCIÓN) */}
       {productoSeleccionado && (
-        <div 
-          className="modal fade show d-block" 
-          tabIndex="-1" 
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1050 }}
           onClick={() => setProductoSeleccionado(null)}
         >
-          <div 
+          <div
             className="modal-dialog modal-dialog-centered modal-lg"
             onClick={(e) => e.stopPropagation()}
           >
@@ -252,9 +255,9 @@ export default function Home() {
                     ? productoSeleccionado.categoria?.nombre
                     : productoSeleccionado.categoria || 'Especialidad Artesanal'}
                 </span>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   aria-label="Cerrar"
                   onClick={() => setProductoSeleccionado(null)}
                 ></button>
@@ -269,9 +272,7 @@ export default function Home() {
                       alt={productoSeleccionado.nombre}
                       className="img-fluid rounded-3"
                       style={{ maxHeight: '420px', width: '100%', objectFit: 'contain' }}
-                      onError={(e) => {
-                        e.target.src = `https://via.placeholder.com/400?text=${encodeURIComponent(productoSeleccionado.nombre)}`;
-                      }}
+                      onError={(e) => handleImageError(e, productoSeleccionado)}
                     />
                   </div>
 
@@ -283,12 +284,12 @@ export default function Home() {
                     </h4>
 
                     {/* Descripción enriquecida sanitizada en el Modal */}
-                    <div 
-                      className="text-muted mb-3" 
+                    <div
+                      className="text-muted mb-3"
                       style={{ lineHeight: '1.6' }}
-                      dangerouslySetInnerHTML={{ 
-                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '') 
-                      }} 
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(productoSeleccionado.descripcion || '')
+                      }}
                     />
 
                     {productoSeleccionado.stock !== undefined && (

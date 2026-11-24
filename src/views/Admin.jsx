@@ -21,7 +21,7 @@ const FORM_INICIAL = {
   stock: 10,
   categoria: 'tortas-cuadradas',
   tamano: 'mediano',
-  imagen: '/img/product_1.avif',
+  imagen: '/img/product_1.jpg',
   descripcion: ''
 };
 
@@ -98,7 +98,7 @@ export default function Admin() {
       stock: producto.stock !== undefined ? producto.stock : 10,
       categoria: producto.categoria || 'tortas-cuadradas',
       tamano: producto.tamano || 'mediano',
-      imagen: producto.imagen || '/img/product_1.avif',
+      imagen: producto.imagen || `/img/product_${producto.id}.jpg`,
       descripcion: producto.descripcion || ''
     });
     setErrores({});
@@ -155,8 +155,9 @@ export default function Admin() {
   };
 
   const obtenerNombreCategoria = (valor) => {
-    const encontrada = CATEGORIAS_DISPONIBLES.find((c) => c.value === valor);
-    return encontrada ? encontrada.label : valor;
+    const catValor = typeof valor === 'object' ? valor?.nombre : valor;
+    const encontrada = CATEGORIAS_DISPONIBLES.find((c) => c.value === catValor);
+    return encontrada ? encontrada.label : catValor;
   };
 
   return (
@@ -282,7 +283,7 @@ export default function Admin() {
                   className="form-control"
                   value={form.imagen}
                   onChange={(e) => setForm({ ...form, imagen: e.target.value })}
-                  placeholder="/img/product_1.avif"
+                  placeholder="/img/product_1.jpg"
                 />
               </div>
 
@@ -344,16 +345,34 @@ export default function Admin() {
                         <small className="text-muted fw-semibold">{prod.codigo || '-'}</small>
                       </td>
                       <td>
-                        <div className="fw-semibold">{prod.nombre}</div>
-                        <small className="text-muted text-capitalize">{prod.tamano}</small>
-                        {prod.descripcion && (
-                          <div
-                            className="text-muted small mt-1"
-                            dangerouslySetInnerHTML={{
-                              __html: DOMPurify.sanitize(prod.descripcion)
+                        <div className="d-flex align-items-center gap-3">
+                          <img
+                            src={prod.imagen || `/img/product_${prod.id}.jpg`}
+                            alt={prod.nombre}
+                            className="rounded-3 border flex-shrink-0"
+                            style={{
+                              width: '52px',
+                              height: '52px',
+                              objectFit: 'cover'
+                            }}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = `/img/product_${prod.id}.jpg`;
                             }}
                           />
-                        )}
+                          <div>
+                            <div className="fw-semibold">{prod.nombre}</div>
+                            <small className="text-muted text-capitalize">{prod.tamano}</small>
+                            {prod.descripcion && (
+                              <div
+                                className="text-muted small mt-1"
+                                dangerouslySetInnerHTML={{
+                                  __html: DOMPurify.sanitize(prod.descripcion)
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span className="badge bg-secondary">

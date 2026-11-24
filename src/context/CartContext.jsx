@@ -174,7 +174,7 @@ export const CartProvider = ({ children }) => {
       ...nuevoProducto,
       id: Date.now(),
       codigo: nuevoProducto.codigo?.trim() || `MS-${Math.floor(100 + Math.random() * 900)}`,
-      imagen: nuevoProducto.imagen?.trim() || '/img/product_1.avif',
+      imagen: nuevoProducto.imagen?.trim() || '/img/product_1.jpg',
       tamano: nuevoProducto.tamano || 'mediano',
       precio: Number(nuevoProducto.precio) || 0,
       stock: nuevoProducto.stock !== undefined ? Number(nuevoProducto.stock) : STOCK_POR_DEFECTO

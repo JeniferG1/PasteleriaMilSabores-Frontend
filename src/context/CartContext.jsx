@@ -213,6 +213,11 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('productos_milsabores', JSON.stringify(listaBase));
   };
 
+  const cantidadTotalCarrito = cart.reduce(
+    (acc, item) => acc + (Number(item.cantidad) || 1),
+    0
+  );
+
   const subtotal = cart.reduce(
     (acc, item) => acc + (Number(item.precio) || 0) * (Number(item.cantidad) || 1),
     0
@@ -225,6 +230,7 @@ export const CartProvider = ({ children }) => {
       value={{
         productos,
         cart,
+        cantidadTotalCarrito,
         subtotal,
         descuento,
         cupon,

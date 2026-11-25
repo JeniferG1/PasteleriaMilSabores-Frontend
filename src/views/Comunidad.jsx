@@ -4,6 +4,41 @@ import { useAuth } from '../context/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
 import DOMPurify from 'dompurify';
 
+const ARTICULOS_HISTORIA = [
+  {
+    id: 'blog-guinness-1995',
+    etiqueta: 'Hito Histórico · 1995',
+    titulo: 'El Récord Guinness de 1995: la torta más grande que unió a todo Chile',
+    fecha: 'Archivo Histórico · 1995',
+    imagen: '/img/portada4.jpg',
+    resumen:
+      'Revive la hazaña de nuestros maestros pasteleros en 1995, cuando horneamos y decoramos una torta monumental que nos valió un Récord Guinness.',
+    contenido: `
+      <p>En <strong>1995</strong>, Pastelería Mil Sabores marcó un antes y un después en la repostería nacional al alcanzar un <strong>Récord Guinness</strong> con la preparación de una torta gigante elaborada de forma artesanal.</p>
+      <p>Durante días, decenas de maestros pasteleros trabajaron de manera coordinada batiendo bizcochos, preparando rellenos tradicionales de manjar y crema, y decorando cada tramo ante miles de familias que se acercaron a celebrar.</p>
+      <ul>
+        <li><strong>Trabajo en equipo:</strong> Más de 40 especialistas en pastelería y logística participaron en el montaje.</li>
+        <li><strong>Sabor tradicional:</strong> Se utilizaron recetas clásicas chilenas con ingredientes frescos seleccionados.</li>
+        <li><strong>Legado comunitario:</strong> Miles de porciones fueron compartidas con los asistentes y organizaciones sociales.</li>
+      </ul>
+    `
+  },
+  {
+    id: 'blog-50-anos',
+    etiqueta: 'Aniversario · 50 Años',
+    titulo: '50 años de trayectoria: medio siglo endulzando celebraciones familiares',
+    fecha: 'Especial Aniversario',
+    imagen: '/img/Trayectoria.jpg',
+    resumen:
+      'Desde nuestros primeros hornos hasta hoy, repasamos cinco décadas de dedicación, recetas heredadas y compromiso con cada cliente.',
+    contenido: `
+      <p>Cumplir <strong>50 años de historia</strong> es el reflejo del cariño de generaciones de familias que nos han elegido para sus cumpleaños, matrimonios y reuniones de domingo.</p>
+      <p>A lo largo de estas cinco décadas hemos mantenido intacta nuestra esencia artesanal, incorporando además opciones <strong>sin azúcar, sin gluten y veganas</strong> para que nadie quede fuera de la mesa.</p>
+      <p>Como agradecimiento a quienes nos han acompañado durante tantos años, mantenemos activo nuestro <strong>beneficio especial del 50% de descuento</strong> para clientes mayores de 50 años en toda nuestra tienda.</p>
+    `
+  }
+];
+
 export default function Comunidad() {
   const { usuarioLogueado } = useAuth();
 
@@ -43,6 +78,9 @@ export default function Comunidad() {
   const [contenido, setContenido] = useState('');
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+
+  // Estado para el modal de lectura de artículos del Blog
+  const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
 
   const handlePublicar = (e) => {
     e.preventDefault();
@@ -87,15 +125,74 @@ export default function Comunidad() {
 
   return (
     <div className="container py-5">
-      <div className="text-center mx-auto mb-5" style={{ maxWidth: '680px' }}>
+      {/* Encabezado Principal */}
+      <div className="text-center mx-auto mb-5" style={{ maxWidth: '720px' }}>
         <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">
-          💬 Comunidad Mil Sabores
+          📖 Blogs & Comunidad Mil Sabores
         </span>
-        <h1 className="display-6 fw-bold mb-3">Reseñas, Recetas y Tips Dulces</h1>
+        <h1 className="display-6 fw-bold mb-3">Nuestra Historia, Consejos y Reseñas</h1>
         <p className="text-muted">
-          Comparte tu experiencia con nuestros productos o descubre consejos de repostería artesanal.
+          Conoce los hitos que marcaron nuestros 50 años de tradición artesanal y comparte tus experiencias con nuestra comunidad.
         </p>
-        <hr className="w-25 mx-auto bg-primary" />
+        <hr className="w-25 mx-auto bg-warning" />
+      </div>
+
+      {/* SECCIÓN 1: ARTÍCULOS DEL BLOG (HISTORIA DE LA PASTELERÍA) */}
+      <div className="mb-5">
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <h3 className="fw-bold mb-0">📰 Crónicas y Blogs de Nuestra Pastelería</h3>
+          <span className="text-muted small d-none d-md-inline">Haz clic en "Leer artículo" para ver la historia completa</span>
+        </div>
+
+        <div className="row g-4">
+          {ARTICULOS_HISTORIA.map((art) => (
+            <div className="col-md-6" key={art.id}>
+              <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white">
+                <div style={{ height: '210px', overflow: 'hidden' }}>
+                  <img
+                    src={art.imagen}
+                    alt={art.titulo}
+                    className="w-100 h-100"
+                    style={{ objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/img/product_1.jpg';
+                    }}
+                  />
+                </div>
+                <div className="card-body p-4 d-flex flex-column">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="badge bg-dark text-warning px-3 py-2 rounded-pill">
+                      {art.etiqueta}
+                    </span>
+                    <small className="text-muted">{art.fecha}</small>
+                  </div>
+                  <h4 className="fw-bold mt-2 mb-2">{art.titulo}</h4>
+                  <p className="text-muted small flex-grow-1 mb-4">{art.resumen}</p>
+                  <div className="mt-auto">
+                    <button
+                      type="button"
+                      className="btn btn-outline-dark rounded-pill px-4 fw-bold"
+                      onClick={() => setArticuloSeleccionado(art)}
+                    >
+                      Leer artículo completo →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <hr className="my-5" />
+
+      {/* SECCIÓN 2: MURO INTERACTIVO DE RESEÑAS, TIPS Y ANUNCIOS */}
+      <div className="mb-4">
+        <h3 className="fw-bold">💬 Muro de la Comunidad: Reseñas, Recetas y Anuncios</h3>
+        <p className="text-muted small">
+          Revisa los consejos de nuestros maestros pasteleros, anuncios oficiales y opiniones de clientes.
+        </p>
       </div>
 
       <div className="row g-4">
@@ -222,6 +319,65 @@ export default function Comunidad() {
           </div>
         </div>
       </div>
+
+      {/* MODAL PARA LEER EL ARTÍCULO COMPLETO DEL BLOG */}
+      {articuloSeleccionado && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1050 }}
+          onClick={() => setArticuloSeleccionado(null)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+              <div style={{ height: '240px', overflow: 'hidden' }}>
+                <img
+                  src={articuloSeleccionado.imagen}
+                  alt={articuloSeleccionado.titulo}
+                  className="w-100 h-100"
+                  style={{ objectFit: 'cover' }}
+                />
+              </div>
+              <div className="modal-header border-0 pb-0">
+                <div>
+                  <span className="badge bg-dark text-warning px-3 py-2 rounded-pill me-2">
+                    {articuloSeleccionado.etiqueta}
+                  </span>
+                  <small className="text-muted">{articuloSeleccionado.fecha}</small>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Cerrar"
+                  onClick={() => setArticuloSeleccionado(null)}
+                ></button>
+              </div>
+              <div className="modal-body p-4 pt-2">
+                <h3 className="fw-bold mb-3">{articuloSeleccionado.titulo}</h3>
+                <div
+                  className="text-muted"
+                  style={{ lineHeight: '1.7' }}
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(articuloSeleccionado.contenido)
+                  }}
+                />
+                <div className="text-end mt-4">
+                  <button
+                    type="button"
+                    className="btn btn-warning rounded-pill px-4 fw-bold"
+                    onClick={() => setArticuloSeleccionado(null)}
+                  >
+                    Cerrar lectura
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

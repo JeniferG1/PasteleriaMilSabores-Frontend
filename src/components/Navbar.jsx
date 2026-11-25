@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,6 +7,7 @@ export default function Navbar() {
   const { cantidadTotalCarrito, cart } = useCart();
   const { usuarioLogueado, logoutUsuario } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const totalItems =
     typeof cantidadTotalCarrito === 'number'
@@ -15,9 +16,18 @@ export default function Navbar() {
         ? cart.reduce((acc, item) => acc + (Number(item.cantidad) || 1), 0)
         : 0;
 
+  const esGestion =
+    usuarioLogueado?.rol === 'admin' || usuarioLogueado?.rol === 'vendedor';
+
   const handleCerrarSesion = () => {
     logoutUsuario();
     navigate('/login');
+  };
+
+  const handleIrAPanel = () => {
+    if (location.pathname === '/admin') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -64,8 +74,22 @@ export default function Navbar() {
 
             {usuarioLogueado ? (
               <>
-                <li className="nav-item text-light mx-lg-2 my-1 my-lg-0 small">
-                  Hola, <b>{usuarioLogueado.nombre}</b>
+                <li className="nav-item mx-lg-2 my-1 my-lg-0 small">
+                  {esGestion ? (
+                    <Link
+                      to="/admin"
+                      onClick={handleIrAPanel}
+                      className="nav-link text-light d-inline-block p-0"
+                      title="Ir al Panel de Administración"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      Hola, <b className="text-warning text-decoration-underline">{usuarioLogueado.nombre}</b>
+                    </Link>
+                  ) : (
+                    <span className="text-light">
+                      Hola, <b>{usuarioLogueado.nombre}</b>
+                    </span>
+                  )}
                 </li>
                 <li className="nav-item">
                   <button

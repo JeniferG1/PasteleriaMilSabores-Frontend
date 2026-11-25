@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import RichTextEditor from '../components/RichTextEditor';
 import DOMPurify from 'dompurify';
@@ -38,6 +38,19 @@ export default function Admin({ soloLecturaVendedor = false }) {
   const [editandoId, setEditandoId] = useState(null);
   const [errores, setErrores] = useState({});
   const [mensaje, setMensaje] = useState('');
+
+  // Referencias para desplazamiento suave entre secciones
+  const seccionEdicionRef = useRef(null);
+  const seccionComunidadRef = useRef(null);
+  const seccionContactoRef = useRef(null);
+
+  const irASeccion = (ref) => {
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Estados para Moderación de Comentarios / Comunidad desde el Admin
   const [comentarios, setComentarios] = useState(() => {
@@ -134,7 +147,7 @@ export default function Admin({ soloLecturaVendedor = false }) {
       descripcion: producto.descripcion || ''
     });
     setErrores({});
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    irASeccion(seccionEdicionRef);
   };
 
   const cancelarEdicion = () => {
@@ -195,8 +208,8 @@ export default function Admin({ soloLecturaVendedor = false }) {
   const consultasPendientes = consultasContacto.filter((c) => !c.leido).length;
 
   return (
-    <div className="container my-5">
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div className="container my-5 position-relative">
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h2 className="mb-0 fw-bold">Panel de Administración - Mil Sabores</h2>
         <button
           type="button"
@@ -214,6 +227,51 @@ export default function Admin({ soloLecturaVendedor = false }) {
         </button>
       </div>
 
+      {/* BARRA DE NAVEGACIÓN RÁPIDA ENTRE APARTADOS */}
+      <div
+        className="card border-0 shadow-sm rounded-pill px-3 py-2 mb-4 bg-white sticky-top"
+        style={{ top: '12px', zIndex: 1020 }}
+      >
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3"
+              onClick={() => irASeccion(seccionEdicionRef)}
+            >
+              🎂 Edición y Productos ({productos.length})
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-dark fw-semibold rounded-pill px-3"
+              onClick={() => irASeccion(seccionComunidadRef)}
+            >
+              💬 Comunidad ({comentarios.length})
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-dark fw-semibold rounded-pill px-3 d-inline-flex align-items-center gap-1"
+              onClick={() => irASeccion(seccionContactoRef)}
+            >
+              <span>📩 Mensajes de Contacto</span>
+              {consultasPendientes > 0 && (
+                <span className="badge rounded-pill bg-danger">{consultasPendientes}</span>
+              )}
+            </button>
+          </div>
+
+          {editandoId && (
+            <button
+              type="button"
+              className="btn btn-sm btn-dark text-warning fw-bold rounded-pill px-3"
+              onClick={() => irASeccion(seccionEdicionRef)}
+            >
+              ✏️ Volver al producto en edición
+            </button>
+          )}
+        </div>
+      </div>
+
       {mensaje && (
         <div className="alert alert-success fw-semibold shadow-sm" role="alert">
           {mensaje}
@@ -221,7 +279,12 @@ export default function Admin({ soloLecturaVendedor = false }) {
       )}
 
       {/* SECCIÓN 1: GESTIÓN DE PRODUCTOS (CRUD) */}
-      <div className="row mb-5">
+      <div
+        ref={seccionEdicionRef}
+        id="seccion-edicion"
+        className="row mb-5"
+        style={{ scrollMarginTop: '85px' }}
+      >
         <div className="col-lg-5 mb-4">
           <div className={`card p-4 shadow-sm border-0 ${editandoId ? 'border-warning border-2' : ''}`}>
             <h4 className="fw-bold">
@@ -446,7 +509,12 @@ export default function Admin({ soloLecturaVendedor = false }) {
 
       {/* SECCIÓN 2: MODERACIÓN Y CREACIÓN DE COMENTARIOS / RESEÑAS */}
       <hr className="my-5" />
-      <div className="row">
+      <div
+        ref={seccionComunidadRef}
+        id="seccion-comunidad"
+        className="row"
+        style={{ scrollMarginTop: '85px' }}
+      >
         <div className="col-12 mb-3">
           <h3 className="fw-bold">💬 Moderación de la Comunidad (Reseñas y Tips)</h3>
           <p className="text-muted">
@@ -459,7 +527,7 @@ export default function Admin({ soloLecturaVendedor = false }) {
           <div className="card p-4 shadow-sm border-0">
             <h5 className="fw-bold mb-3">Publicar Anuncio u Oficial</h5>
             {errorComentario && <div className="alert alert-danger py-2 small">{errorComentario}</div>}
-            
+
             <form onSubmit={handleAdminPublicarComentario}>
               <div className="mb-3">
                 <label className="form-label fw-semibold">Tipo</label>
@@ -504,7 +572,7 @@ export default function Admin({ soloLecturaVendedor = false }) {
         <div className="col-lg-7">
           <div className="card p-4 shadow-sm border-0">
             <h5 className="fw-bold mb-3">Comentarios y Reseñas Registrados ({comentarios.length})</h5>
-            
+
             {comentarios.length === 0 ? (
               <p className="text-muted text-center py-4">No hay publicaciones en la comunidad actualmente.</p>
             ) : (
@@ -551,7 +619,12 @@ export default function Admin({ soloLecturaVendedor = false }) {
 
       {/* SECCIÓN 3: BANDEJA DE MENSAJES Y SOLICITUDES DE CONTACTO */}
       <hr className="my-5" />
-      <div className="row">
+      <div
+        ref={seccionContactoRef}
+        id="seccion-contacto"
+        className="row"
+        style={{ scrollMarginTop: '85px' }}
+      >
         <div className="col-12">
           <div className="card p-4 shadow-sm border-0">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">

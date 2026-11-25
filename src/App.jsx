@@ -10,6 +10,7 @@ import Admin from './views/Admin';
 import Login from './views/Login';
 import Registro from './views/Registro';
 import Navbar from './components/Navbar';
+import Contacto from './components/Contacto';
 
 function RutaGestion({ children }) {
   const { usuarioLogueado } = useAuth();
@@ -45,6 +46,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/categorias" element={<Categorias />} />
         <Route path="/comunidad" element={<Comunidad />} />
+        <Route path="/contacto" element={<Contacto />} />
         <Route path="/premios" element={<Premios />} />
         <Route path="/carrito" element={<Carrito />} />
         <Route

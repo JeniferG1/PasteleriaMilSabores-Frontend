@@ -52,6 +52,11 @@ export default function Navbar() {
               </Link>
             </li>
             <li className="nav-item">
+              <Link className="nav-link" to="/contacto">
+                Contacto
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link className="nav-link text-warning fw-semibold" to="/premios">
                 🎮 Gana un Premio
               </Link>

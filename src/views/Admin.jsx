@@ -25,7 +25,7 @@ const FORM_INICIAL = {
   descripcion: ''
 };
 
-export default function Admin() {
+export default function Admin({ soloLecturaVendedor = false }) {
   const {
     productos,
     agregarProductoAdmin,
@@ -51,6 +51,38 @@ export default function Admin() {
   useEffect(() => {
     localStorage.setItem('comunidad_milsabores', JSON.stringify(comentarios));
   }, [comentarios]);
+
+  // Estados para Bandeja de Mensajes y Solicitudes de Contacto
+  const [consultasContacto, setConsultasContacto] = useState(() => {
+    try {
+      const guardadas = localStorage.getItem('consultas_milsabores');
+      return guardadas ? JSON.parse(guardadas) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('consultas_milsabores', JSON.stringify(consultasContacto));
+  }, [consultasContacto]);
+
+  const handleToggleLeidoConsulta = (id) => {
+    setConsultasContacto((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, leido: !item.leido } : item
+      )
+    );
+    setMensaje('Estado de la solicitud actualizado.');
+    setTimeout(() => setMensaje(''), 3000);
+  };
+
+  const handleEliminarConsulta = (id) => {
+    if (window.confirm('¿Deseas eliminar esta solicitud de contacto?')) {
+      setConsultasContacto((prev) => prev.filter((item) => item.id !== id));
+      setMensaje('Solicitud de contacto eliminada.');
+      setTimeout(() => setMensaje(''), 3000);
+    }
+  };
 
   // Validación y envío de productos
   const validarFormulario = () => {
@@ -159,6 +191,8 @@ export default function Admin() {
     const encontrada = CATEGORIAS_DISPONIBLES.find((c) => c.value === catValor);
     return encontrada ? encontrada.label : catValor;
   };
+
+  const consultasPendientes = consultasContacto.filter((c) => !c.leido).length;
 
   return (
     <div className="container my-5">
@@ -504,6 +538,99 @@ export default function Admin() {
                           >
                             Eliminar
                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 3: BANDEJA DE MENSAJES Y SOLICITUDES DE CONTACTO */}
+      <hr className="my-5" />
+      <div className="row">
+        <div className="col-12">
+          <div className="card p-4 shadow-sm border-0">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <div>
+                <h3 className="fw-bold mb-1">📩 Mensajes y Solicitudes de Contacto</h3>
+                <p className="text-muted mb-0">
+                  Revisa las consultas enviadas por los clientes desde el formulario de Contacto de la pastelería.
+                </p>
+              </div>
+              <div className="d-flex gap-2">
+                <span className="badge bg-warning text-dark px-3 py-2 rounded-pill">
+                  Pendientes: {consultasPendientes}
+                </span>
+                <span className="badge bg-dark text-warning px-3 py-2 rounded-pill">
+                  Total: {consultasContacto.length}
+                </span>
+              </div>
+            </div>
+
+            {consultasContacto.length === 0 ? (
+              <p className="text-muted text-center py-4 mb-0">
+                No hay mensajes o solicitudes de contacto registradas todavía.
+              </p>
+            ) : (
+              <div className="table-responsive" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+                <table className="table table-hover align-middle mb-0">
+                  <thead className="table-light sticky-top">
+                    <tr>
+                      <th>Estado</th>
+                      <th>Cliente</th>
+                      <th>Correo</th>
+                      <th>Mensaje / Solicitud</th>
+                      <th>Fecha</th>
+                      <th className="text-end">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consultasContacto.map((consulta) => (
+                      <tr key={consulta.id}>
+                        <td>
+                          <span
+                            className={`badge rounded-pill ${
+                              consulta.leido
+                                ? 'bg-success-subtle text-success'
+                                : 'bg-warning text-dark'
+                            }`}
+                          >
+                            {consulta.leido ? 'Respondido' : 'Pendiente'}
+                          </span>
+                        </td>
+                        <td className="fw-semibold">{consulta.nombre}</td>
+                        <td>
+                          <a href={`mailto:${consulta.correo}`} className="text-decoration-none">
+                            {consulta.correo}
+                          </a>
+                        </td>
+                        <td style={{ maxWidth: '360px' }}>
+                          <div className="small text-secondary">{consulta.mensaje}</div>
+                        </td>
+                        <td>
+                          <small className="text-muted">{consulta.fecha}</small>
+                        </td>
+                        <td className="text-end text-nowrap">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-success me-1"
+                            onClick={() => handleToggleLeidoConsulta(consulta.id)}
+                          >
+                            {consulta.leido ? 'Marcar pendiente' : 'Marcar respondido'}
+                          </button>
+                          {!soloLecturaVendedor && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleEliminarConsulta(consulta.id)}
+                            >
+                              Eliminar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

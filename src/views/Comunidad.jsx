@@ -320,7 +320,6 @@ export default function Comunidad() {
         </div>
       </div>
 
-      {/* MODAL PARA LEER EL ARTÍCULO COMPLETO DEL BLOG */}
       {articuloSeleccionado && (
         <div
           className="modal fade show d-block"
@@ -333,14 +332,6 @@ export default function Comunidad() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-              <div style={{ height: '240px', overflow: 'hidden' }}>
-                <img
-                  src={articuloSeleccionado.imagen}
-                  alt={articuloSeleccionado.titulo}
-                  className="w-100 h-100"
-                  style={{ objectFit: 'cover' }}
-                />
-              </div>
               <div className="modal-header border-0 pb-0">
                 <div>
                   <span className="badge bg-dark text-warning px-3 py-2 rounded-pill me-2">
@@ -355,7 +346,21 @@ export default function Comunidad() {
                   onClick={() => setArticuloSeleccionado(null)}
                 ></button>
               </div>
-              <div className="modal-body p-4 pt-2">
+
+              <div className="modal-body p-4">
+                <div className="text-center bg-light rounded-3 p-3 mb-4">
+                  <img
+                    src={articuloSeleccionado.imagen}
+                    alt={articuloSeleccionado.titulo}
+                    className="img-fluid rounded-3"
+                    style={{ maxHeight: '380px', width: '100%', objectFit: 'contain' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/img/product_1.jpg';
+                    }}
+                  />
+                </div>
+
                 <h3 className="fw-bold mb-3">{articuloSeleccionado.titulo}</h3>
                 <div
                   className="text-muted"

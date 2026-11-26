@@ -1,20 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { SellosNutricionales } from '../components/SellosNutricionales';
 import DOMPurify from 'dompurify';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 export default function Categorias() {
   const { productos, agregarAlCarrito } = useCart();
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('todas');
 
-  // Estado para el producto seleccionado en el Modal de Detalle
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
-  // Filtrar productos según la categoría seleccionada
+  const container = useRef(null);
+  const { contextSafe } = useGSAP({ scope: container });
+
   const productosFiltrados = productos.filter((prod) => {
     if (categoriaSeleccionada === 'todas') return true;
     const cat = typeof prod.categoria === 'object' ? prod.categoria?.nombre : prod.categoria;
     return cat === categoriaSeleccionada;
+  });
+
+  useGSAP(() => {
+    gsap.from('.cat-header', {
+      y: -25,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity'
+    });
+
+    gsap.from('.cat-filter', {
+      y: 25,
+      opacity: 0,
+      duration: 0.65,
+      delay: 0.15,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity'
+    });
+  }, { scope: container });
+
+  useGSAP(() => {
+    if (productosFiltrados.length > 0) {
+      gsap.from('.product-item', {
+        y: 45,
+        opacity: 0,
+        duration: 0.65,
+        stagger: { amount: 0.45, from: 'start' },
+        ease: 'power2.out',
+        clearProps: 'transform,opacity',
+        scrollTrigger: {
+          trigger: '.catalogo-grid',
+          start: 'top 85%'
+        }
+      });
+    }
+  }, { scope: container, dependencies: [categoriaSeleccionada, productosFiltrados.length] });
+
+  const handleCardEnter = contextSafe((e) => {
+    gsap.to(e.currentTarget, {
+      y: -6,
+      scale: 1.02,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
+  });
+
+  const handleCardLeave = contextSafe((e) => {
+    gsap.to(e.currentTarget, {
+      y: 0,
+      scale: 1,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
+  });
+
+  const handleBtnPulse = contextSafe((e) => {
+    gsap.fromTo(
+      e.currentTarget,
+      { scale: 0.94 },
+      { scale: 1, duration: 0.3, ease: 'back.out(2)' }
+    );
   });
 
   const handleImageError = (e, producto) => {
@@ -23,9 +91,8 @@ export default function Categorias() {
   };
 
   return (
-    <div className="container py-5">
-      {/* Encabezado */}
-      <div className="text-center mb-5">
+    <div ref={container} className="container py-5">
+      <div className="text-center mb-5 cat-header">
         <h1 className="display-5 fw-bold mb-3">Catálogo de Productos 🎂</h1>
         <p className="text-muted fs-5">
           Encuentra la torta o el postre perfecto para tu celebración.
@@ -35,8 +102,7 @@ export default function Categorias() {
         </p>
       </div>
 
-      {/* Selector Desplegable de Categorías */}
-      <div className="row justify-content-center mb-5">
+      <div className="row justify-content-center mb-5 cat-filter">
         <div className="col-md-5 col-lg-4">
           <div className="card shadow-sm border-0 p-3 bg-white rounded-3">
             <label htmlFor="filtroCategoria" className="form-label fw-bold text-dark mb-2">
@@ -63,12 +129,15 @@ export default function Categorias() {
         </div>
       </div>
 
-      <div className="row g-4">
+      <div className="row g-4 catalogo-grid">
         {productosFiltrados.length > 0 ? (
           productosFiltrados.map((prod) => (
             <div className="col-lg-4 col-md-6" key={prod.id}>
-              <div className="card product-item bg-white rounded-3 shadow-sm h-100 overflow-hidden border-0">
-                {/* Contenedor de imagen clickeable */}
+              <div
+                className="card product-item bg-white rounded-3 shadow-sm h-100 overflow-hidden border-0"
+                onMouseEnter={handleCardEnter}
+                onMouseLeave={handleCardLeave}
+              >
                 <div
                   className="position-relative overflow-hidden"
                   style={{ height: '250px', cursor: 'pointer' }}
@@ -96,7 +165,6 @@ export default function Categorias() {
                 </div>
 
                 <div className="text-center p-4 d-flex flex-column flex-grow-1">
-                  {/* Título clickeable */}
                   <h5
                     className="mb-2 fw-bold text-dark"
                     style={{ cursor: 'pointer' }}
@@ -108,7 +176,6 @@ export default function Categorias() {
                     ${Number(prod.precio).toLocaleString('es-CL')}
                   </span>
 
-                  {/* Descripción enriquecida sanitizada en la tarjeta */}
                   <div
                     className="text-muted small mb-3 flex-grow-1"
                     dangerouslySetInnerHTML={{
@@ -123,7 +190,10 @@ export default function Categorias() {
                   <div className="mt-auto">
                     <button
                       className="btn btn-warning rounded-pill py-2 px-4 w-100 fw-bold shadow-sm"
-                      onClick={() => agregarAlCarrito(prod)}
+                      onClick={(e) => {
+                        handleBtnPulse(e);
+                        agregarAlCarrito(prod);
+                      }}
                     >
                       Añadir al Carrito 🛒
                     </button>
@@ -139,7 +209,6 @@ export default function Categorias() {
         )}
       </div>
 
-      {/* MODAL DE DETALLE DEL PRODUCTO (FOTO COMPLETA + DESCRIPCIÓN) */}
       {productoSeleccionado && (
         <div
           className="modal fade show d-block"
@@ -168,7 +237,6 @@ export default function Categorias() {
 
               <div className="modal-body p-4">
                 <div className="row g-4 align-items-center">
-                  {/* Imagen completa sin recortar */}
                   <div className="col-md-6 text-center bg-light rounded-3 p-3">
                     <img
                       src={productoSeleccionado.imagen || `/img/product_${productoSeleccionado.id}.jpg`}
@@ -179,14 +247,12 @@ export default function Categorias() {
                     />
                   </div>
 
-                  {/* Información detallada */}
                   <div className="col-md-6 d-flex flex-column">
                     <h3 className="fw-bold mb-2">{productoSeleccionado.nombre}</h3>
                     <h4 className="fw-bold mb-3" style={{ color: '#d48b44' }}>
                       ${Number(productoSeleccionado.precio).toLocaleString('es-CL')}
                     </h4>
 
-                    {/* Descripción enriquecida sanitizada en el Modal */}
                     <div
                       className="text-muted mb-3"
                       style={{ lineHeight: '1.6' }}

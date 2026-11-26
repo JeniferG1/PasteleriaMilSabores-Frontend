@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import RichTextEditor from '../components/RichTextEditor';
 import DOMPurify from 'dompurify';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const ARTICULOS_HISTORIA = [
   {
@@ -79,8 +84,68 @@ export default function Comunidad() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // Estado para el modal de lectura de artículos del Blog
   const [articuloSeleccionado, setArticuloSeleccionado] = useState(null);
+
+  const container = useRef(null);
+  const { contextSafe } = useGSAP({ scope: container });
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+
+    tl.from('.comunidad-header', {
+      y: -25,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity'
+    }).from('.blog-card', {
+      y: 40,
+      opacity: 0,
+      duration: 0.7,
+      stagger: 0.18,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity'
+    }, '-=0.3');
+
+    gsap.from('.muro-card', {
+      y: 35,
+      opacity: 0,
+      duration: 0.65,
+      stagger: 0.12,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity',
+      scrollTrigger: {
+        trigger: '.muro-comunidad',
+        start: 'top 85%'
+      }
+    });
+  }, { scope: container, dependencies: [publicaciones.length] });
+
+  const handleCardEnter = contextSafe((e) => {
+    gsap.to(e.currentTarget, {
+      y: -6,
+      scale: 1.015,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
+  });
+
+  const handleCardLeave = contextSafe((e) => {
+    gsap.to(e.currentTarget, {
+      y: 0,
+      scale: 1,
+      duration: 0.25,
+      ease: 'power2.out'
+    });
+  });
+
+  const handleBtnPulse = contextSafe((e) => {
+    gsap.fromTo(
+      e.currentTarget,
+      { scale: 0.94 },
+      { scale: 1, duration: 0.3, ease: 'back.out(2)' }
+    );
+  });
 
   const handlePublicar = (e) => {
     e.preventDefault();
@@ -124,9 +189,8 @@ export default function Comunidad() {
   };
 
   return (
-    <div className="container py-5">
-      {/* Encabezado Principal */}
-      <div className="text-center mx-auto mb-5" style={{ maxWidth: '720px' }}>
+    <div ref={container} className="container py-5">
+      <div className="text-center mx-auto mb-5 comunidad-header" style={{ maxWidth: '720px' }}>
         <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">
           📖 Blogs & Comunidad Mil Sabores
         </span>
@@ -137,7 +201,6 @@ export default function Comunidad() {
         <hr className="w-25 mx-auto bg-warning" />
       </div>
 
-      {/* SECCIÓN 1: ARTÍCULOS DEL BLOG (HISTORIA DE LA PASTELERÍA) */}
       <div className="mb-5">
         <div className="d-flex align-items-center justify-content-between mb-3">
           <h3 className="fw-bold mb-0">📰 Crónicas y Blogs de Nuestra Pastelería</h3>
@@ -147,7 +210,11 @@ export default function Comunidad() {
         <div className="row g-4">
           {ARTICULOS_HISTORIA.map((art) => (
             <div className="col-md-6" key={art.id}>
-              <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white">
+              <div
+                className="card blog-card border-0 shadow-sm rounded-4 overflow-hidden h-100 bg-white"
+                onMouseEnter={handleCardEnter}
+                onMouseLeave={handleCardLeave}
+              >
                 <div style={{ height: '210px', overflow: 'hidden' }}>
                   <img
                     src={art.imagen}
@@ -173,7 +240,10 @@ export default function Comunidad() {
                     <button
                       type="button"
                       className="btn btn-outline-dark rounded-pill px-4 fw-bold"
-                      onClick={() => setArticuloSeleccionado(art)}
+                      onClick={(e) => {
+                        handleBtnPulse(e);
+                        setArticuloSeleccionado(art);
+                      }}
                     >
                       Leer artículo completo →
                     </button>
@@ -187,7 +257,6 @@ export default function Comunidad() {
 
       <hr className="my-5" />
 
-      {/* SECCIÓN 2: MURO INTERACTIVO DE RESEÑAS, TIPS Y ANUNCIOS */}
       <div className="mb-4">
         <h3 className="fw-bold">💬 Muro de la Comunidad: Reseñas, Recetas y Anuncios</h3>
         <p className="text-muted small">
@@ -195,10 +264,9 @@ export default function Comunidad() {
         </p>
       </div>
 
-      <div className="row g-4">
-        {/* Formulario */}
+      <div className="row g-4 muro-comunidad">
         <div className="col-lg-5">
-          <div className="card border-0 shadow-sm p-4 bg-white rounded-3 sticky-top" style={{ top: '20px' }}>
+          <div className="card muro-card border-0 shadow-sm p-4 bg-white rounded-3 sticky-top" style={{ top: '20px' }}>
             {usuarioLogueado ? (
               <>
                 <h4 className="fw-bold mb-1">Nueva Publicación</h4>
@@ -245,7 +313,11 @@ export default function Comunidad() {
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-warning w-100 rounded-pill py-2 fw-bold shadow-sm">
+                  <button
+                    type="submit"
+                    className="btn btn-warning w-100 rounded-pill py-2 fw-bold shadow-sm"
+                    onClick={handleBtnPulse}
+                  >
                     Publicar Comentario ✍️
                   </button>
                 </form>
@@ -270,11 +342,15 @@ export default function Comunidad() {
           </div>
         </div>
 
-        {/* Listado de Publicaciones */}
         <div className="col-lg-7">
           <div className="d-flex flex-column gap-3">
             {publicaciones.map((pub) => (
-              <div key={pub.id} className="card border-0 shadow-sm p-4 bg-white rounded-3">
+              <div
+                key={pub.id}
+                className="card muro-card border-0 shadow-sm p-4 bg-white rounded-3"
+                onMouseEnter={handleCardEnter}
+                onMouseLeave={handleCardLeave}
+              >
                 <div className="d-flex justify-content-between align-items-start mb-2">
                   <div>
                     <span

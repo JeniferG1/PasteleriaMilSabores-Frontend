@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const FORM_INICIAL = {
   nombre: '',
@@ -10,6 +15,40 @@ export default function Contacto() {
   const [form, setForm] = useState(FORM_INICIAL);
   const [errores, setErrores] = useState({});
   const [enviadoExito, setEnviadoExito] = useState(false);
+
+  const container = useRef(null);
+  const { contextSafe } = useGSAP({ scope: container });
+
+  useGSAP(() => {
+    const tl = gsap.timeline();
+
+    tl.from('.contacto-header', {
+      y: -25,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity'
+    }).from('.contacto-card', {
+      y: 35,
+      opacity: 0,
+      duration: 0.7,
+      stagger: 0.15,
+      ease: 'power2.out',
+      clearProps: 'transform,opacity',
+      scrollTrigger: {
+        trigger: '.contacto-grid',
+        start: 'top 85%'
+      }
+    }, '-=0.25');
+  }, { scope: container });
+
+  const handleBtnPulse = contextSafe((e) => {
+    gsap.fromTo(
+      e.currentTarget,
+      { scale: 0.94 },
+      { scale: 1, duration: 0.3, ease: 'back.out(2)' }
+    );
+  });
 
   const validar = () => {
     const nuevosErrores = {};
@@ -56,7 +95,7 @@ export default function Contacto() {
       const prev = JSON.parse(localStorage.getItem('consultas_milsabores') || '[]');
       localStorage.setItem('consultas_milsabores', JSON.stringify([nuevaConsulta, ...prev]));
     } catch {
-      
+
     }
 
     setEnviadoExito(true);
@@ -65,8 +104,8 @@ export default function Contacto() {
   };
 
   return (
-    <div className="container py-5">
-      <div className="text-center mx-auto mb-5" style={{ maxWidth: '680px' }}>
+    <div ref={container} className="container py-5">
+      <div className="text-center mx-auto mb-5 contacto-header" style={{ maxWidth: '680px' }}>
         <span className="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">
           ✉️ Contacto
         </span>
@@ -76,9 +115,9 @@ export default function Contacto() {
         </p>
       </div>
 
-      <div className="row g-4 justify-content-center">
+      <div className="row g-4 justify-content-center contacto-grid">
         <div className="col-lg-5">
-          <div className="card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
+          <div className="card contacto-card border-0 shadow-sm rounded-4 p-4 h-100 bg-white">
             <h4 className="fw-bold mb-3">Canales de Atención</h4>
             <p className="text-muted small mb-4">
               Nuestro equipo de pastelería y atención al cliente está disponible para ayudarte con tus celebraciones y consultas.
@@ -103,7 +142,7 @@ export default function Contacto() {
         </div>
 
         <div className="col-lg-7">
-          <div className="card border-0 shadow-sm rounded-4 p-4 bg-white">
+          <div className="card contacto-card border-0 shadow-sm rounded-4 p-4 bg-white">
             <h4 className="fw-bold mb-3">Formulario de Contacto</h4>
 
             {enviadoExito && (
@@ -167,6 +206,7 @@ export default function Contacto() {
               <button
                 type="submit"
                 className="btn btn-warning text-dark fw-bold rounded-pill px-4 py-2 shadow-sm"
+                onClick={handleBtnPulse}
               >
                 Enviar Mensaje
               </button>

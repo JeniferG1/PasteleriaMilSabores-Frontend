@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth, esCorreoDuoc } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import CakeTower from '../components/CakeTower';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const esCumpleanosHoy = (fechaNacimiento) => {
   if (!fechaNacimiento) return false;
@@ -48,6 +53,9 @@ export default function Carrito() {
     cvvTarjeta: ''
   });
 
+  const container = useRef(null);
+  const { contextSafe } = useGSAP({ scope: container });
+
   useEffect(() => {
     if (usuarioLogueado) {
       setDatosEnvio((prev) => ({
@@ -59,12 +67,53 @@ export default function Carrito() {
     }
   }, [usuarioLogueado]);
 
+  useGSAP(() => {
+    if (!compraExitosa && cart && cart.length > 0) {
+      const tl = gsap.timeline();
+
+      tl.from('.carrito-header', {
+        y: -25,
+        opacity: 0,
+        duration: 0.65,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity'
+      }).from('.carrito-card', {
+        y: 35,
+        opacity: 0,
+        duration: 0.65,
+        stagger: 0.14,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity'
+      }, '-=0.25');
+
+      gsap.from('.carrito-item-row', {
+        x: -20,
+        opacity: 0,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity',
+        scrollTrigger: {
+          trigger: '.carrito-items-tabla',
+          start: 'top 88%'
+        }
+      });
+    }
+  }, { scope: container, dependencies: [cart?.length, compraExitosa] });
+
+  const handleBtnPulse = contextSafe((e) => {
+    gsap.fromTo(
+      e.currentTarget,
+      { scale: 0.94 },
+      { scale: 1, duration: 0.3, ease: 'back.out(2)' }
+    );
+  });
+
   const handleCuponSubmit = (e) => {
     e.preventDefault();
     aplicarCupon(inputCupon);
   };
 
-  // Reglas de negocio: Descuento Senior 50% y Beneficio Cumpleaños Duoc UC
   const tieneDescuentoSenior = Boolean(
     usuarioLogueado?.esSenior || usuarioLogueado?.descuento === 0.5
   );
@@ -194,7 +243,7 @@ export default function Carrito() {
 
   if (compraExitosa) {
     return (
-      <div className="container py-5">
+      <div ref={container} className="container py-5">
         <div className="card border-0 shadow-sm p-5 mx-auto text-center" style={{ maxWidth: '650px' }}>
           <h2 className="fw-bold text-success mb-2">¡Pedido Confirmado con Éxito!</h2>
           <p className="text-muted mb-4">
@@ -241,7 +290,7 @@ export default function Carrito() {
 
   if (!cart || cart.length === 0) {
     return (
-      <div className="container-xxl py-5">
+      <div ref={container} className="container-xxl py-5">
         <div className="container text-center py-5">
           <div className="p-5 bg-light rounded-3 shadow-sm mx-auto" style={{ maxWidth: '600px' }}>
             <h2 className="mb-3 fw-bold">Tu Carrito está Vacío</h2>
@@ -258,9 +307,9 @@ export default function Carrito() {
   }
 
   return (
-    <div className="container-xxl py-5">
+    <div ref={container} className="container-xxl py-5">
       <div className="container">
-        <div className="text-center mx-auto mb-5" style={{ maxWidth: '600px' }}>
+        <div className="text-center mx-auto mb-5 carrito-header" style={{ maxWidth: '600px' }}>
           <h1 className="display-6 mb-3 fw-bold">Carrito de Compras</h1>
           <p className="text-muted">
             Revisa tus productos seleccionados, juega por un postre gratis y completa tu entrega
@@ -280,7 +329,10 @@ export default function Carrito() {
               <button
                 type="button"
                 className="btn btn-sm btn-primary fw-bold rounded-pill px-3"
-                onClick={handleReclamarTortaCumpleanos}
+                onClick={(e) => {
+                  handleBtnPulse(e);
+                  handleReclamarTortaCumpleanos();
+                }}
               >
                 Reclamar Torta Gratis ($0)
               </button>
@@ -296,8 +348,8 @@ export default function Carrito() {
 
         <div className="row g-4">
           <div className="col-lg-8">
-            <div className="card shadow-sm border-0 p-4 mb-4">
-              <div className="table-responsive">
+            <div className="card carrito-card shadow-sm border-0 p-4 mb-4">
+              <div className="table-responsive carrito-items-tabla">
                 <table className="table align-middle">
                   <thead>
                     <tr>
@@ -314,7 +366,10 @@ export default function Carrito() {
                       const alcanzoLimite = item.cantidad >= limiteMaximo;
 
                       return (
-                        <tr key={item.id} className={item.esRegalo ? 'table-success' : ''}>
+                        <tr
+                          key={item.id}
+                          className={`carrito-item-row ${item.esRegalo ? 'table-success' : ''}`}
+                        >
                           <td>
                             <div className="fw-bold">{item.nombre}</div>
                             {item.esRegalo ? (
@@ -388,7 +443,10 @@ export default function Carrito() {
                 <button
                   type="button"
                   className="btn btn-outline-danger rounded-pill px-4"
-                  onClick={vaciarCarrito}
+                  onClick={(e) => {
+                    handleBtnPulse(e);
+                    vaciarCarrito();
+                  }}
                 >
                   Vaciar Carrito
                 </button>
@@ -396,7 +454,7 @@ export default function Carrito() {
             </div>
 
             {!mostrarCheckout && (
-              <div className="card shadow-sm border border-warning p-4 mb-4 bg-white">
+              <div className="card carrito-card shadow-sm border border-warning p-4 mb-4 bg-white">
                 {usuarioLogueado ? (
                   yaTieneRegaloJuego ? (
                     <div className="text-center py-3">
@@ -434,7 +492,7 @@ export default function Carrito() {
             )}
 
             {mostrarCheckout && (
-              <div className="card shadow-sm border-0 p-4 mb-4 bg-white">
+              <div className="card carrito-card shadow-sm border-0 p-4 mb-4 bg-white">
                 <h4 className="fw-bold mb-3">Datos de Despacho y Entrega</h4>
                 <form onSubmit={handleConfirmarCompra} noValidate>
                   <div className="row g-3">
@@ -605,6 +663,7 @@ export default function Carrito() {
                   <button
                     type="submit"
                     className="btn btn-success w-100 py-3 rounded-pill fw-bold mt-4 shadow-sm"
+                    onClick={handleBtnPulse}
                   >
                     Confirmar y Pagar ${totalPagar.toLocaleString('es-CL')}
                   </button>
@@ -614,7 +673,7 @@ export default function Carrito() {
           </div>
 
           <div className="col-lg-4">
-            <div className="card border-0 shadow-sm p-4 mb-4">
+            <div className="card carrito-card border-0 shadow-sm p-4 mb-4">
               <h5 className="fw-bold mb-3">Cupón de Descuento</h5>
               <form onSubmit={handleCuponSubmit} className="d-flex">
                 <input
@@ -624,7 +683,11 @@ export default function Carrito() {
                   value={inputCupon}
                   onChange={(e) => setInputCupon(e.target.value)}
                 />
-                <button type="submit" className="btn btn-secondary px-4">
+                <button
+                  type="submit"
+                  className="btn btn-secondary px-4"
+                  onClick={handleBtnPulse}
+                >
                   Aplicar
                 </button>
               </form>
@@ -644,7 +707,7 @@ export default function Carrito() {
               </small>
             </div>
 
-            <div className="card border-0 shadow-sm p-4">
+            <div className="card carrito-card border-0 shadow-sm p-4">
               <h4 className="fw-bold mb-3">Resumen de Compra</h4>
               <hr />
               <div className="d-flex justify-content-between mb-2">
@@ -682,7 +745,10 @@ export default function Carrito() {
                 <button
                   type="button"
                   className="btn btn-success w-100 py-3 rounded-pill fw-bold shadow-sm"
-                  onClick={handleProcederPagoClick}
+                  onClick={(e) => {
+                    handleBtnPulse(e);
+                    handleProcederPagoClick();
+                  }}
                 >
                   Proceder al Pago
                 </button>
